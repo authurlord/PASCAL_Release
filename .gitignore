@@ -1,0 +1,31 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.venv/
+.venv-*/
+.conda-*/
+
+# Runtime artifacts
+results/
+*.log
+*.pid
+.cache/
+api_usage.jsonl
+
+# Local-only overrides
+.env
+.env.local
+src/shared/_local_provider.py
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Datasets are downloaded by the user; do not commit them.
+data/bird-interact-lite-hf-meta/
+data/bird-interact-full-hf-meta/
+data/mini-interact-hf-meta/
