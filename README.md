@@ -92,11 +92,16 @@ bash scripts/run_eval.sh anchor          # PASCAL anchor  (~3-4 h on lite_300)
 bash scripts/run_eval.sh react           # official ReACT (~2 h on lite_300)
 ```
 
-`run_eval.sh anchor` activates the PASCAL anchor (PASCAL prompt +
-streamlined tools + schema pre-injection; `PASCAL_NO_VALUE_DIFF=1`
-disables value-diff oracle feedback).  `run_eval.sh react` activates
-the official ReACT baseline (`PASCAL_NO_PROTOCOL=1` — minimal prompt
-and the upstream 9-tool surface minus KB tools).
+Three modes are supported:
+
+* `anchor` — PASCAL anchor for BIRD-Interact lite / full.  PASCAL
+  prompt + streamlined tools + schema pre-injection;
+  `PASCAL_NO_VALUE_DIFF=1` disables value-diff oracle feedback.
+* `anchor-mini` — PASCAL anchor for mini-interact.  Adds full per-DB
+  KB pre-injection (`PASCAL_KB_INJECTION=1`); the mini-interact paper
+  anchor relies on this.
+* `react` — official ReACT baseline (`PASCAL_NO_PROTOCOL=1`): minimal
+  prompt + the upstream 9-tool surface minus KB tools.
 
 ## Running on the other benchmarks
 

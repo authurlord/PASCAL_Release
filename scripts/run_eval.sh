@@ -2,8 +2,9 @@
 # Single-entry runner for the PASCAL anchor and the official ReACT baseline.
 #
 # Usage:
-#   bash scripts/run_eval.sh anchor [extra args …]
-#   bash scripts/run_eval.sh react  [extra args …]
+#   bash scripts/run_eval.sh anchor      [extra args …]   # BIRD-Interact lite / full
+#   bash scripts/run_eval.sh anchor-mini [extra args …]   # mini-interact (KB injection ON)
+#   bash scripts/run_eval.sh react       [extra args …]   # official ReACT baseline
 #
 # Default args evaluate the full BIRD-Interact-lite split at concurrency 48
 # and write to results/eval_<mode>.json. Pass extra flags after the mode to
@@ -32,19 +33,28 @@ export DB_ENV_PORT=6002
 
 case "$MODE" in
   anchor)
-    # PASCAL anchor: PASCAL prompt + streamlined tools + schema pre-injection.
-    # Oracle row-cell value-diff feedback disabled for clean audit.
+    # PASCAL anchor for BIRD-Interact lite / full: PASCAL prompt +
+    # streamlined tools + schema pre-injection. Oracle row-cell value-diff
+    # feedback disabled for clean audit.
     export PASCAL_NO_VALUE_DIFF=1
+    unset PASCAL_NO_PROTOCOL PASCAL_KB_INJECTION || true
+    ;;
+  anchor-mini)
+    # PASCAL anchor for mini-interact: same as `anchor` plus full per-DB
+    # KB pre-injected into the initial user message (the mini-interact
+    # paper anchor relies on KB injection).
+    export PASCAL_NO_VALUE_DIFF=1
+    export PASCAL_KB_INJECTION=1
     unset PASCAL_NO_PROTOCOL || true
     ;;
   react)
     # Official ReACT baseline: minimal prompt, original 9-tool surface
     # minus KB tools. Matches the upstream BIRD-Interact agentic scaffold.
     export PASCAL_NO_PROTOCOL=1
-    unset PASCAL_NO_VALUE_DIFF || true
+    unset PASCAL_NO_VALUE_DIFF PASCAL_KB_INJECTION || true
     ;;
   *)
-    echo "Usage: bash scripts/run_eval.sh {anchor|react} [extra args ...]" >&2
+    echo "Usage: bash scripts/run_eval.sh {anchor|anchor-mini|react} [extra args ...]" >&2
     exit 1
     ;;
 esac
