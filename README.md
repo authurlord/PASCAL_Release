@@ -64,7 +64,8 @@ PASCAL_release/
 ├── data/
 │   ├── README.md            ← BIRD-Interact + PRACTIQ download / GT merge
 │   ├── combine_public_with_gt.py
-│   └── hard_60.jsonl        ← 60-task hard subset (smoke test)
+│   ├── hard_60.jsonl        ← 60-task hard subset (smoke test)
+│   └── practiq_medium.jsonl.gz  ← PRACTIQ medium 1069 tasks (GT stripped)
 ├── dumps/
 │   ├── README.md            ← restore recipe (no docker / sudo required)
 │   ├── lite.sql.gz          ← BIRD-Interact lite_300 (22 MB)

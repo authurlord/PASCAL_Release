@@ -93,22 +93,49 @@ docker image; we verified the test cases pass under both backends.
 
 ---
 
-## PRACTIQ mini-interact
+## Mini-interact
 
-We use the PRACTIQ split as reorganised under `mini-interact-hf-meta/`,
-which keeps each task's SQLite database alongside its metadata. The
-release ships this set in `dumps/mini_interact.tar.xz` (per the PRACTIQ
-licence — academic use).
+A 300-task SQLite-backed subset of BIRD-Interact, redistributed under
+`mini-interact-hf-meta/`.  Each task carries its `<db>.sqlite` snapshot
+inline.  The release ships this set in `dumps/mini_interact.tar.xz`
+(academic use).
 
 ```bash
 tar -xJf dumps/mini_interact.tar.xz -C data/
 ls data/mini-interact-hf-meta/   # 30 db dirs
 ```
 
-`shared/sqlite_utils.py:_detect_backend(db_name)` auto-routes queries
-through SQLite when the task's `selected_database` matches a PRACTIQ
-DB; no extra configuration needed.
+`db_environment/server.py:_is_sqlite_backend` auto-routes queries
+through SQLite for these tasks; no extra configuration needed beyond
+extracting the tarball.
 
-The upstream PRACTIQ paper is "PRACTIQ: A Practical Conversational
-Text-to-SQL dataset with Ambiguous and Unanswerable Queries"; see the
-GitHub repo for the canonical citation.
+---
+
+## PRACTIQ (medium, 1069 tasks)
+
+The release includes the **task JSONL** for PRACTIQ medium at
+`data/practiq_medium.jsonl.gz` (1069 tasks, ~640 KB, ground truth
+stripped).  Each task carries `_practiq_meta`, `external_knowledge`,
+`amb_user_query`, etc. — enough to inspect task structure and dispatch
+the agent.
+
+The release does **not** redistribute the underlying Spider databases
+(~5 GB).  To run PRACTIQ medium end-to-end:
+
+1. Download the Spider database collection per the PRACTIQ repo
+   instructions:
+   https://github.com/amazon-science/conversational-ambiguous-unanswerable-text2sql
+2. Email the PRACTIQ team for ground truth (or regenerate it from the
+   PRACTIQ generation pipeline in the repo above).
+3. Merge the GT JSONL into `data/practiq_medium.jsonl.gz` (extract,
+   run `combine_public_with_gt.py`, gzip back).
+4. Point the runtime at the Spider data root:
+   ```bash
+   export SPIDER_DB_ROOT=<spider-data-root>
+   bash scripts/run_eval.sh anchor-mini \
+     --data data/practiq_medium.jsonl
+   ```
+
+Upstream PRACTIQ paper: *PRACTIQ: A Practical Conversational
+Text-to-SQL dataset with Ambiguous and Unanswerable Queries* (Dong
+et al., NAACL 2025) — https://aclanthology.org/2025.naacl-long.13/ .
