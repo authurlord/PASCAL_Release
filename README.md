@@ -18,6 +18,41 @@ benchmarks.
 | Mini-interact | (subset of BIRD-Interact reorganised under the `mini-interact-hf-meta/` SQLite layout) | uses the BIRD-Interact paper / leaderboard above |
 | PRACTIQ (medium) | [Dong et al., *PRACTIQ: A Practical Conversational Text-to-SQL dataset with Ambiguous and Unanswerable Queries*, NAACL 2025](https://aclanthology.org/2025.naacl-long.13/) | https://github.com/amazon-science/conversational-ambiguous-unanswerable-text2sql |
 
+## Reference traces
+
+Every per-task trajectory we used in the paper (one entry per task —
+`tool_trajectory`, `dialogue_history`, `phase1_passed`, `total_reward`,
+…) is committed under `traces/`.  Reviewers who hit any divergence
+when reproducing can `gunzip` the trace and diff against their own
+run.
+
+| Config | Benchmark | P1 | File |
+|---|---|---:|---|
+| **PASCAL anchor** (NVD) | BIRD-Interact lite_300 | **51.0 %** (153 / 300) | `traces/pascal_lite300.json.gz` |
+| **PASCAL anchor** (NVD) | BIRD-Interact full_600 | **38.3 %** (227 / 593) | `traces/pascal_full600.json.gz` |
+| **PASCAL anchor** (NVD + KB injection) | Mini-interact 300 | **67.7 %** (203 / 300) | `traces/pascal_mini300.json.gz` |
+| **Official ReACT** baseline (`PASCAL_NO_PROTOCOL=1`, NVD) | BIRD-Interact lite_300 | 33.1 % (96 / 290) | `traces/react_lite300.json.gz` |
+
+Inspect a trace:
+
+```bash
+zcat traces/pascal_lite300.json.gz | python -m json.tool | less
+# Or pick one task's trajectory:
+python -c 'import json,gzip,sys
+for r in json.load(gzip.open("traces/pascal_lite300.json.gz","rt"))["results"]:
+    if r["task_id"]=="archeology_3":
+        print(json.dumps(r,indent=2,default=str)); break'
+```
+
+## User simulator
+
+All numbers above and any reviewer reproduction use **`gemini-2.5-flash-lite`**
+as the user simulator — exactly the model the official BIRD-Interact
+leaderboard uses to grade an agent run.  See `docs/MODEL_CARDS.md`
+for the key-rotation pool (`GOOGLE_API_KEY` / `GOOGLE_API_KEY_2..9`),
+the optional `GEMINI_HTTP_PROXY` for geo-restricted regions, and the
+per-key rate-limit configuration at `src/shared/gemini_limits.json`.
+
 ## Repository layout
 
 ```
@@ -36,6 +71,11 @@ PASCAL_release/
 │   ├── lite.sql.gz          ← BIRD-Interact lite_300 (22 MB)
 │   ├── full.sql.gz          ← BIRD-Interact full_600 (17 MB)
 │   └── mini_interact.tar.xz ← mini-interact 30 SQLite dbs (13 MB)
+├── traces/                  ← per-task trajectories for paper numbers
+│   ├── pascal_lite300.json.gz   ← PASCAL anchor 51 % P1 (lite_300)
+│   ├── pascal_full600.json.gz   ← PASCAL anchor 38 % P1 (full_600)
+│   ├── pascal_mini300.json.gz   ← PASCAL anchor 67 % P1 (mini-interact)
+│   └── react_lite300.json.gz    ← Official ReACT 33 % P1 (lite_300)
 ├── src/
 │   ├── orchestrator/        ← parallel runner + a-interact pipeline
 │   ├── system_agent/        ← ADK agent (PASCAL prompt + ReACT prompt)
