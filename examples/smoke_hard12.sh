@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # End-to-end smoke test: PASCAL anchor on the first 12 tasks of the
-# BIRD-Interact-lite hard_60 subset. ~10-20 minutes on a single 35B vLLM.
+# BIRD-Interact-lite hard_60 subset.
 #
 # Prerequisites
 # -------------
@@ -11,7 +11,7 @@
 #   (see docs/MODEL_CARDS.md).
 # * The hard_60 JSONL with ground truth merged in.  The committed
 #   data/hard_60.jsonl ships WITHOUT sol_sql/test_cases — you must
-#   merge the GT JSONL obtained from the upstream maintainers using
+#   merge the GT JSONL obtained from the upstream maintainers via
 #   data/combine_public_with_gt.py before running this script.  See
 #   data/README.md for the email + merge recipe.
 set -euo pipefail
@@ -30,6 +30,3 @@ if ! python -c "import json,sys; r=json.loads(open('$DATA').readline()); sys.exi
 fi
 
 bash scripts/run_eval.sh anchor --limit 12
-echo
-echo "Smoke test complete. Inspect: $OUTPUT"
-echo "Expect P1 in the 30-40% range on hard_60 with the 35B anchor."
