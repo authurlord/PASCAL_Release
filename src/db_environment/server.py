@@ -1030,7 +1030,7 @@ async def explore_tables(req: SchemaRequest):
     WHERE t.table_schema = 'public' AND t.table_type = 'BASE TABLE'
     GROUP BY t.table_name ORDER BY t.table_name
     """
-    resp = await execute_sql(ExecuteSQLRequest(task_id=req.task_id, sql=sql))
+    resp = await execute_sql_endpoint(ExecuteSQLRequest(task_id=req.task_id, sql=sql))
     return {"result": resp.result if hasattr(resp, "result") else str(resp)}
 
 
@@ -1075,7 +1075,7 @@ async def list_foreign_keys(req: SchemaRequest):
     WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = 'public'
     ORDER BY tc.table_name, kcu.column_name
     """
-    resp = await execute_sql(ExecuteSQLRequest(task_id=req.task_id, sql=sql))
+    resp = await execute_sql_endpoint(ExecuteSQLRequest(task_id=req.task_id, sql=sql))
     return {"result": resp.result if hasattr(resp, "result") else str(resp)}
 
 
