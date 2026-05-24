@@ -13,7 +13,7 @@ python-dotenv>=1.0.0
 
 # ─── Database backends ────────────────────────────────────────────────
 psycopg2-binary>=2.9.9       # PostgreSQL (BIRD-Interact)
-# sqlite3 ships with the CPython stdlib (PRACTIQ mini-interact)
+# sqlite3 ships with the CPython stdlib (PRACTIQ)
 
 # ─── LLM client ───────────────────────────────────────────────────────
 litellm>=1.40.0              # routes to vLLM OpenAI-compatible endpoint

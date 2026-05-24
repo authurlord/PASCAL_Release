@@ -28,4 +28,3 @@ src/shared/_local_provider.py
 # Datasets are downloaded by the user; do not commit them.
 data/bird-interact-lite-hf-meta/
 data/bird-interact-full-hf-meta/
-data/mini-interact-hf-meta/

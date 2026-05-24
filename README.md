@@ -15,7 +15,6 @@ benchmarks.
 | Benchmark | Paper | Leaderboard / Code |
 |---|---|---|
 | BIRD-Interact (lite / full) | [Huo et al., *BIRD-INTERACT: Re-imagining Text-to-SQL Evaluation via Lens of Dynamic Interactions*, ICLR 2026](https://openreview.net/forum?id=nHrYBGujps) | https://bird-interact.github.io/ · [GitHub](https://github.com/bird-bench/BIRD-Interact) |
-| Mini-interact | (subset of BIRD-Interact reorganised under the `mini-interact-hf-meta/` SQLite layout) | uses the BIRD-Interact paper / leaderboard above |
 | PRACTIQ (medium) | [Dong et al., *PRACTIQ: A Practical Conversational Text-to-SQL dataset with Ambiguous and Unanswerable Queries*, NAACL 2025](https://aclanthology.org/2025.naacl-long.13/) | https://github.com/amazon-science/conversational-ambiguous-unanswerable-text2sql |
 
 ## Reference traces
@@ -69,8 +68,7 @@ PASCAL_release/
 ├── dumps/
 │   ├── README.md            ← restore recipe (no docker / sudo required)
 │   ├── lite.sql.gz          ← BIRD-Interact lite_300 (22 MB)
-│   ├── full.sql.gz          ← BIRD-Interact full_600 (17 MB)
-│   └── mini_interact.tar.xz ← mini-interact 30 SQLite dbs (13 MB)
+│   └── full.sql.gz          ← BIRD-Interact full_600 (17 MB)
 ├── traces/                  ← per-task trajectories for paper numbers
 │   ├── pascal_lite300.json.gz   ← PASCAL anchor 51 % P1 (lite_300)
 │   ├── pascal_full600.json.gz   ← PASCAL anchor 38 % P1 (full_600)
@@ -143,8 +141,8 @@ Two modes are supported:
 
 ## Running on the other benchmarks
 
-The same code path runs all four splits — the only thing that changes
-is the dataset directory and (for the SQLite-backed splits) the
+The same code path runs all three splits — the only thing that changes
+is the dataset directory and (for the SQLite-backed split) the
 `SPIDER_DB_ROOT` env var.  The agent routes tasks to PostgreSQL or
 SQLite using each task's own metadata (`_practiq_meta` → SQLite,
 `follow_up` → PG, otherwise the file-system probe rooted at
@@ -154,7 +152,6 @@ SQLite using each task's own metadata (`_practiq_meta` → SQLite,
 |---|---|---|---|
 | BIRD-Interact lite | `data/bird-interact-lite-hf-meta/bird_interact_data.jsonl` | PostgreSQL | `DB_METADATA_ROOT=<lite root>` |
 | BIRD-Interact full | `data/bird-interact-full-hf-meta/bird_interact_data.jsonl` | PostgreSQL | `DB_METADATA_ROOT=<full root>`, `PG_PORT=<full port>` |
-| Mini-interact | `data/mini-interact-hf-meta/mini_interact.jsonl` | SQLite | `DB_METADATA_ROOT=<mini root>`, `SPIDER_DB_ROOT=<mini root>` |
 | PRACTIQ medium | upstream `bird_format.jsonl` | SQLite (Spider) | `SPIDER_DB_ROOT=<Spider data root>` |
 
 PRACTIQ medium requires the upstream Spider database collection — see
@@ -173,8 +170,8 @@ default (set `PASCAL_NUM_SPEC_TOKENS=0` to disable).
 
 ## Datasets
 
-BIRD-Interact, mini-interact, and PRACTIQ come from upstream
-maintainers and are **not redistributed in raw form**:
+BIRD-Interact and PRACTIQ come from upstream maintainers and are
+**not redistributed in raw form**:
 
 * BIRD-Interact: public splits via HuggingFace; ground truth obtained
   by email to the upstream team (see `data/README.md`).

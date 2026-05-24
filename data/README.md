@@ -1,12 +1,12 @@
 # Datasets
 
-PASCAL is evaluated on three benchmarks:
+PASCAL is evaluated on the following benchmarks:
 
 | Benchmark | Tasks | Source |
 |---|---:|---|
 | BIRD-Interact **lite** | 300 | https://bird-interact.github.io/ |
 | BIRD-Interact **full** | 600 | https://bird-interact.github.io/ |
-| PRACTIQ **mini-interact** | 300 | https://github.com/amazon-science/conversational-ambiguous-unanswerable-text2sql |
+| **PRACTIQ medium** | 1069 | https://github.com/amazon-science/conversational-ambiguous-unanswerable-text2sql |
 
 This release reuses both datasets unchanged for academic comparison. We
 **do not redistribute ground truth** (`sol_sql`, `test_cases`) for
@@ -30,9 +30,7 @@ data/
 ├── bird-interact-lite-hf-meta/    # from HuggingFace, see step 1
 │   ├── bird_interact_data.jsonl   # merged with GT — step 3
 │   └── <db_name>/                 # per-DB schema / column meanings / KB
-├── bird-interact-full-hf-meta/    # (optional, same layout)
-└── mini-interact-hf-meta/         # PRACTIQ tasks (SQLite-backed)
-    └── <db>/<db>.sqlite
+└── bird-interact-full-hf-meta/    # (optional, same layout)
 ```
 
 `db_environment/server.py` probes `data/bird-interact-lite-hf-meta` and
@@ -93,24 +91,6 @@ docker image; we verified the test cases pass under both backends.
 
 ---
 
-## Mini-interact
-
-A 300-task SQLite-backed subset of BIRD-Interact, redistributed under
-`mini-interact-hf-meta/`.  Each task carries its `<db>.sqlite` snapshot
-inline.  The release ships this set in `dumps/mini_interact.tar.xz`
-(academic use).
-
-```bash
-tar -xJf dumps/mini_interact.tar.xz -C data/
-ls data/mini-interact-hf-meta/   # 30 db dirs
-```
-
-`db_environment/server.py:_is_sqlite_backend` auto-routes queries
-through SQLite for these tasks; no extra configuration needed beyond
-extracting the tarball.
-
----
-
 ## PRACTIQ (medium, 1069 tasks)
 
 The release includes the **task JSONL** for PRACTIQ medium at
@@ -132,7 +112,7 @@ The release does **not** redistribute the underlying Spider databases
 4. Point the runtime at the Spider data root:
    ```bash
    export SPIDER_DB_ROOT=<spider-data-root>
-   bash scripts/run_eval.sh anchor-mini \
+   bash scripts/run_eval.sh anchor \
      --data data/practiq_medium.jsonl
    ```
 

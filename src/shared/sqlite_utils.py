@@ -18,11 +18,10 @@ from typing import Any, Dict, List, Optional, Tuple
 logger = logging.getLogger(__name__)
 
 # Set SPIDER_DB_ROOT to the directory holding `<db>/<db>.sqlite` template
-# files. Default points at the in-tree `mini-interact-hf-meta/` directory
-# (PRACTIQ layout). See dumps/README.md for restoration of the SQLite set.
+# files (PRACTIQ uses the upstream Spider data root). See data/README.md.
 def _default_spider_db_root() -> str:
     repo_root = pathlib.Path(__file__).resolve().parent.parent.parent
-    return str(repo_root / "data" / "mini-interact-hf-meta")
+    return str(repo_root / "data" / "spider-db-root")
 
 _SPIDER_DB_ROOT = pathlib.Path(os.environ.get("SPIDER_DB_ROOT", _default_spider_db_root()))
 # Task-specific copies live here (each task gets an isolated .sqlite file)

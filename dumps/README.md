@@ -11,7 +11,6 @@ exact upstream artifacts and the recipe used to produce each file.
 |---|---:|---|---:|---|
 | `lite.sql.gz` | 22 MB | PostgreSQL 14 (`pg_dumpall`) | 62 (incl. templates / sub-DBs) | [`shawnxxh/bird-interact-postgresql:latest`](https://hub.docker.com/r/shawnxxh/bird-interact-postgresql) (BIRD-Interact `lite_300` + `hard_60`) |
 | `full.sql.gz` | 17 MB | PostgreSQL 14 (`pg_dumpall`) | 57 (incl. templates / sub-DBs) | [`shawnxxh/bird-interact-postgresql-full:latest`](https://hub.docker.com/r/shawnxxh/bird-interact-postgresql-full) (BIRD-Interact `full_600`) |
-| `mini_interact.tar.xz` | 13 MB | SQLite | 30 dbs | [`birdsql/bird-interact-lite`](https://huggingface.co/datasets/birdsql/bird-interact-lite) — `mini-interact-hf-meta/` reorganisation of the BIRD-Interact tasks under a SQLite layout |
 
 > **PRACTIQ medium (1069 tasks)** is **not** shipped in this release —
 > the underlying Spider databases (~5 GB) are distributed separately
@@ -26,7 +25,6 @@ canonical upstream image:
 | File | Recipe |
 |---|---|
 | `lite.sql.gz`, `full.sql.gz` | `pg_dumpall` against the upstream Docker image at the port it exposes, then `gzip`. No schema, role, or row modifications. |
-| `mini_interact.tar.xz` | `tar -cJf` over the in-tree `mini-interact-hf-meta/` directory, packed with `--numeric-owner --owner=0 --group=0` so the archive contains no UID/GID metadata. |
 
 The dumps contain **only databases** — no ground truth (`sol_sql`,
 `test_cases`) is embedded anywhere.  The upstream BIRD-Interact team
@@ -95,36 +93,7 @@ Performance is within ~1 % of the docker container.
 
 ---
 
-## 2. Mini-interact (`mini_interact.tar.xz`)
-
-Mini-interact is a SQLite-backed reorganisation of a 300-task subset of
-BIRD-Interact.  Each task DB is a single `.sqlite` file under
-`mini-interact-hf-meta/<db>/<db>.sqlite`.  The eval runtime auto-routes
-queries through SQLite when the task's metadata indicates SQLite (see
-`src/db_environment/server.py:_is_sqlite_backend`).
-
-### 2.1 Restore into the data/ tree
-
-```bash
-cd <release root>
-tar -xJf dumps/mini_interact.tar.xz -C data/
-ls data/mini-interact-hf-meta/   # 30 db dirs: alien/, archeology/, …, virtual/
-```
-
-Each db dir contains `<db>.sqlite` and `<db>_template.sqlite`.  The
-db-environment service copies from the template at the start of every
-task to guarantee a clean state; runtime writes only `<db>.sqlite`.
-
-### 2.2 Smoke check
-
-```bash
-sqlite3 data/mini-interact-hf-meta/exchange_traded_funds/exchange_traded_funds.sqlite \
-    ".tables" | head
-```
-
----
-
-## 3. Point the runtime at this setup
+## 2. Point the runtime at this setup
 
 Set the following in your shell before launching the services
 (`scripts/start_services.sh` reads them):
@@ -138,14 +107,13 @@ export PG_DATABASE=postgres
 export DATASET=lite             # or: full
 ```
 
-For mini-interact tasks the runtime auto-detects SQLite — no env
-change needed beyond extracting the tarball above and pointing
-`SPIDER_DB_ROOT=<path to mini-interact-hf-meta>` so the dispatcher
-recognises the SQLite layout.
+For PRACTIQ tasks the runtime auto-detects SQLite — set
+`SPIDER_DB_ROOT=<path to spider data root>` so the dispatcher can
+locate the per-task `.sqlite` file.
 
 ---
 
-## 4. PRACTIQ medium (not included; download separately)
+## 3. PRACTIQ medium (not included; download separately)
 
 PRACTIQ medium tasks reference the **Spider** database collection,
 which the upstream PRACTIQ team distributes separately.  To run
@@ -158,6 +126,6 @@ PRACTIQ medium with this release:
    https://github.com/amazon-science/conversational-ambiguous-unanswerable-text2sql
 3. Place the Spider DB collection at any path and point the eval
    runtime at it: `export SPIDER_DB_ROOT=<spider-data-root>`.
-4. Run with `bash scripts/run_eval.sh anchor-mini --data <practiq jsonl>`.
+4. Run with `bash scripts/run_eval.sh anchor --data <practiq jsonl>`.
 
 The release does not redistribute Spider DBs or PRACTIQ ground truth.

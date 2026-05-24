@@ -33,7 +33,7 @@ export DB_ENV_PORT=6002
 case "$MODE" in
   anchor)
     # PASCAL anchor — applies to all benchmarks (BIRD-Interact lite /
-    # full, mini-interact, PRACTIQ).  PASCAL prompt + streamlined tools
+    # full, PRACTIQ).  PASCAL prompt + streamlined tools
     # + schema pre-injection.  The agent retrieves KB on demand via
     # `get_all_external_knowledge_names` + `get_knowledge_definition`;
     # no pre-injection.  Oracle row-cell value-diff feedback disabled

@@ -24,16 +24,14 @@ from shared import sqlite_utils
 def _is_sqlite_backend(db_name: str, task_data: dict | None = None) -> bool:
     """Return True if this DB should use SQLite, else PG.
 
-    Task-level disambiguation (prevents BIRD-Interact / PRACTIQ /
-    mini-interact name collisions):
+    Task-level disambiguation (prevents BIRD-Interact / PRACTIQ name
+    collisions):
 
       * `_practiq_meta` truthy → SQLite (PRACTIQ medium / Spider).
       * `follow_up` truthy → PG (BIRD-Interact lite / full).
       * Otherwise → file-system probe via `has_spider_db()`. The probe
         looks for `<SPIDER_DB_ROOT>/<db_name>/<db_name>.sqlite`; set
-        `SPIDER_DB_ROOT` to your mini-interact directory when running
-        mini-interact tasks, and to your Spider data root when running
-        PRACTIQ medium.
+        `SPIDER_DB_ROOT` to the Spider data root for PRACTIQ medium.
     """
     if task_data is not None:
         if task_data.get("_practiq_meta"):
@@ -495,11 +493,11 @@ def _practiq_submit_sync(req_task_id, req_sql, td, _submit_attempts) -> SubmitSQ
 
 
 def _bird_sqlite_submit_sync(req_task_id, req_sql, td, _submit_attempts, _successful_phase1_sql) -> SubmitSQLResponse:
-    """BIRD-Interact-style submit on a sqlite backend (mini_interact).
+    """BIRD-Interact-style submit on a SQLite backend.
 
     Mirrors `_submit_sql_sync` PG logic but uses sqlite_utils.* + sqlite3.
-    Mini_interact tasks have no follow_up → Phase 1 only. Reset / submit /
-    test_cases scoring all go through sqlite_utils.
+    BIRD-Interact-on-SQLite tasks have no follow_up → Phase 1 only.
+    Reset / submit / test_cases scoring all go through sqlite_utils.
     """
     import shutil
     import sqlite3 as _sqlite3
@@ -745,8 +743,8 @@ def _submit_sql_sync(req_task_id, req_sql, td, _submit_attempts, _successful_pha
     if td.get("_practiq_meta"):
         return _practiq_submit_sync(req_task_id, req_sql, td, _submit_attempts)
 
-    # BIRD-Interact-on-SQLite path (mini_interact: same task structure as
-    # BIRD-Interact PG but stored as Spider-style sqlite per-DB files)
+    # BIRD-Interact-on-SQLite path (same task structure as BIRD-Interact
+    # PG but stored as Spider-style sqlite per-DB files)
     if td.get("_backend") == "sqlite":
         return _bird_sqlite_submit_sync(
             req_task_id, req_sql, td, _submit_attempts, _successful_phase1_sql
