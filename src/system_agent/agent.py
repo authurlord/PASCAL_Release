@@ -105,7 +105,8 @@ def build_agent(mode: str = "a-interact") -> Agent:
         get_ainteract_tools_original,
     )
     from system_agent.callbacks import (
-        before_model_callback, before_tool_callback, after_tool_callback,
+        before_model_callback, after_model_callback,
+        before_tool_callback, after_tool_callback,
     )
 
     model = _build_model(settings.system_agent_model)
@@ -141,6 +142,7 @@ def build_agent(mode: str = "a-interact") -> Agent:
         instruction=instruction,
         tools=base_tools,
         before_model_callback=before_model_callback,
+        after_model_callback=after_model_callback,
         before_tool_callback=before_tool_callback,
         after_tool_callback=after_tool_callback,
         generate_content_config=types.GenerateContentConfig(temperature=0.7),

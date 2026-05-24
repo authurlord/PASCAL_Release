@@ -223,6 +223,110 @@ async def before_model_callback(
     return None
 
 
+# Match the legacy `<tool_call><function=NAME(...)></tool_call>` and
+# also a bare `<function=NAME(arg1=...)>` form that Qwen sometimes
+# emits when the vllm `qwen3_coder` tool-call parser fails to fire.
+_LEGACY_TOOL_CALL_RE = re.compile(
+    r"<tool_call>\s*<function=(?P<name>[a-zA-Z_][a-zA-Z0-9_]*)\s*\((?P<args>.*?)\)\s*>?\s*</tool_call>",
+    re.DOTALL,
+)
+_LEGACY_FUNCTION_RE = re.compile(
+    r"<function=(?P<name>[a-zA-Z_][a-zA-Z0-9_]*)\s*\((?P<args>.*?)\)>",
+    re.DOTALL,
+)
+
+
+def _parse_legacy_args(arg_str: str) -> dict:
+    """Best-effort kwarg parser for `<function=NAME(k=v, k=v)>` strings.
+
+    Falls back to {} when parsing fails; the agent's tool layer
+    handles missing args gracefully.
+    """
+    arg_str = (arg_str or "").strip()
+    if not arg_str:
+        return {}
+    # Try JSON first
+    try:
+        if arg_str.startswith("{") and arg_str.endswith("}"):
+            return json.loads(arg_str)
+    except Exception:
+        pass
+    out = {}
+    for m in re.finditer(
+        r"([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*("
+        r'"(?:\\.|[^"\\])*"|'        # double-quoted
+        r"'(?:\\.|[^'\\])*'|"        # single-quoted
+        r"[^,]+"                      # bare token until next comma
+        r")",
+        arg_str,
+    ):
+        k, v = m.group(1), m.group(2).strip()
+        if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
+            try:
+                v = json.loads(v) if v.startswith('"') else v[1:-1]
+            except Exception:
+                v = v[1:-1]
+        out[k] = v
+    return out
+
+
+async def after_model_callback(
+    callback_context: CallbackContext, llm_response: LlmResponse
+) -> LlmResponse | None:
+    """Rescue malformed tool calls produced by the model.
+
+    The vllm ``qwen3_coder`` tool-call parser occasionally fails to fire
+    on responses that use the legacy ``<tool_call><function=NAME(args)>``
+    XML shape.  When that happens the response arrives as pure text and
+    the agent never invokes a tool.  This callback detects the legacy
+    shape in any text part and replaces the response with a proper
+    function_call so the agent can continue.
+    """
+    if not llm_response or not llm_response.content:
+        return None
+    parts = list(llm_response.content.parts or [])
+    if not parts:
+        return None
+
+    new_parts: list = []
+    rescued = False
+    for p in parts:
+        # Already a structured function_call — leave alone.
+        if getattr(p, "function_call", None):
+            new_parts.append(p)
+            continue
+        text = getattr(p, "text", None)
+        if not text:
+            new_parts.append(p)
+            continue
+        # Try the strict <tool_call><function=...></tool_call> shape first.
+        match = _LEGACY_TOOL_CALL_RE.search(text) or _LEGACY_FUNCTION_RE.search(text)
+        if not match:
+            new_parts.append(p)
+            continue
+        name = match.group("name")
+        args = _parse_legacy_args(match.group("args"))
+        prefix = text[: match.start()].rstrip()
+        if prefix:
+            new_parts.append(genai_types.Part.from_text(text=prefix))
+        new_parts.append(
+            genai_types.Part(
+                function_call=genai_types.FunctionCall(name=name, args=args)
+            )
+        )
+        rescued = True
+        logger.warning(
+            "after_model_callback: rescued legacy tool call -> %s(%s)",
+            name, list(args.keys()),
+        )
+
+    if not rescued:
+        return None
+    return LlmResponse(
+        content=genai_types.Content(role="model", parts=new_parts),
+    )
+
+
 async def before_tool_callback(
     tool, args: dict, tool_context: ToolContext
 ) -> dict | None:
