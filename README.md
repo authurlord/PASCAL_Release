@@ -30,7 +30,6 @@ run.
 |---|---|---:|---|
 | **PASCAL anchor** (NVD) | BIRD-Interact lite_300 | **51.0 %** (153 / 300) | `traces/pascal_lite300.json.gz` |
 | **PASCAL anchor** (NVD) | BIRD-Interact full_600 | **38.3 %** (227 / 593) | `traces/pascal_full600.json.gz` |
-| **PASCAL anchor** (NVD + KB injection) | Mini-interact 300 | **67.7 %** (203 / 300) | `traces/pascal_mini300.json.gz` |
 | **Official ReACT** baseline (`PASCAL_NO_PROTOCOL=1`, NVD) | BIRD-Interact lite_300 | 33.1 % (96 / 290) | `traces/react_lite300.json.gz` |
 
 Inspect a trace:
@@ -74,7 +73,6 @@ PASCAL_release/
 ├── traces/                  ← per-task trajectories for paper numbers
 │   ├── pascal_lite300.json.gz   ← PASCAL anchor 51 % P1 (lite_300)
 │   ├── pascal_full600.json.gz   ← PASCAL anchor 38 % P1 (full_600)
-│   ├── pascal_mini300.json.gz   ← PASCAL anchor 67 % P1 (mini-interact)
 │   └── react_lite300.json.gz    ← Official ReACT 33 % P1 (lite_300)
 ├── src/
 │   ├── orchestrator/        ← parallel runner + a-interact pipeline
