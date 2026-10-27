@@ -1,6 +1,10 @@
 # When the Bottleneck Shifts: Diagnosing and Closing Information Gaps in Interactive Text-to-SQL
 
-Anonymous code release accompanying the paper *"When the Bottleneck
+**[▶ Online demo — no installation](https://authurlord.github.io/PASCAL_Release/)** · **[Paper · ACL Anthology (EMNLP 2026)](https://aclanthology.org/2026.emnlp-main.465/)**
+
+Browse 900 tasks and replay 2,083 archived PASCAL / ReAct runs, including schema, knowledge bases, tool calls and cached explanations. The website plays stored results; live model execution requires the setup below.
+
+Code release accompanying the paper *"When the Bottleneck
 Shifts: Diagnosing and Closing Information Gaps in Interactive
 Text-to-SQL"*.  The paper introduces **PASCAL**, a training-free
 protocol for interactive text-to-SQL agents.  This repository contains
@@ -189,6 +193,30 @@ MIT — see `LICENSE`.
 
 ## Citation
 
-Anonymous submission.  The canonical citation will be added upon
-de-anonymization.  Please cite BIRD-Interact and PRACTIQ as
-appropriate for their respective benchmarks (paper links above).
+```bibtex
+@inproceedings{yan-etal-2026-bottleneck,
+    title = "When the Bottleneck Shifts: Diagnosing and Closing Information Gaps in Interactive Text-to-{SQL}",
+    author = "Yan, Mengyi  and
+      Ma, Zhinian  and
+      Wang, Yue  and
+      Wang, Yaoshu  and
+      Zhu, Xiaoke  and
+      Wang, Zizhe  and
+      Zhou, Haoyi  and
+      Chen, Zhumin",
+    editor = "Lee, Hung-Yi  and
+      Dev, Sunipa  and
+      Li, Jessy  and
+      Elliott, Desmond",
+    booktitle = "Proceedings of the 2026 Conference on Empirical Methods in Natural Language Processing",
+    month = oct,
+    year = "2026",
+    address = "Budapest, Hungary",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2026.emnlp-main.465/",
+    pages = "10655--10687",
+    ISBN = "979-8-89176-459-0"
+}
+```
+
+Please cite BIRD-Interact and PRACTIQ as appropriate for their respective benchmarks (paper links above).
