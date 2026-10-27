@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>PASCAL · interactive text-to-SQL trajectory demo</title>
+<style>
+  :root{
+    --bg:#0f1117;--panel:#171a23;--panel2:#1e2230;--line:#2a2f3e;--fg:#e6e9ef;
+    --mut:#8b93a7;--acc:#5b9cff;--grn:#3ecf8e;--red:#ff6b6b;--yel:#ffcc66;
+    --pur:#c08cff;--cyan:#4dd0e1;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+       background:var(--bg);color:var(--fg);height:100vh;display:flex;flex-direction:column}
+  header{padding:10px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;
+         gap:14px;background:var(--panel)}
+  header h1{font-size:15px;margin:0;font-weight:650}
+  header h1 .hlink{color:inherit;text-decoration:none}
+  header h1 .hlink:hover{color:var(--cyan);text-decoration:underline}
+  .bibadge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--mut);
+           text-decoration:none;border:1px solid var(--line);border-radius:12px;padding:2px 9px}
+  .bibadge:hover{color:var(--cyan);border-color:var(--cyan)}
+  header .sub{color:var(--mut);font-size:12px}
+  .badge{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--panel2);
+         border:1px solid var(--line);color:var(--mut)}
+  .badge.ok{color:var(--grn);border-color:#214d3a}.badge.bad{color:var(--red);border-color:#5a2a2a}
+  main{flex:1;display:flex;min-height:0}
+  #left{width:300px;display:flex;flex-direction:column;background:var(--panel);overflow:hidden}
+  .tabs{display:flex;border-bottom:1px solid var(--line)}
+  .tab{flex:1;text-align:center;padding:8px;cursor:pointer;font-size:13px;color:var(--mut)}
+  .tab.active{color:var(--fg);border-bottom:2px solid var(--acc);font-weight:600}
+  #list{overflow:auto;flex:1}
+  .item{padding:8px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:12.5px}
+  .item:hover{background:var(--panel2)}.item.sel{background:#23304d}
+  .item .id{font-weight:600;font-family:var(--mono);font-size:12px}
+  .item .meta{color:var(--mut);font-size:11px;margin-top:2px;display:flex;gap:6px;flex-wrap:wrap}
+  .pill{font-size:10px;padding:1px 6px;border-radius:8px;background:var(--panel2);border:1px solid var(--line)}
+  .pill.p1{color:var(--grn);border-color:#214d3a}.pill.p0{color:var(--red);border-color:#5a2a2a}
+  .pill.bi{color:var(--cyan);border-color:#1d4a52}.pill.dm{color:var(--pur);border-color:#3d2a5a}
+  /* DB groups (collapsible) */
+  .dbhdr{display:flex;align-items:center;gap:7px;padding:7px 11px;cursor:pointer;
+         border-bottom:1px solid var(--line);font-size:12.5px;background:var(--panel);position:sticky;top:0}
+  .dbhdr:hover{background:var(--panel2)}
+  .dbhdr .caret{color:var(--mut);width:10px;display:inline-block;transition:transform .12s}
+  .dbhdr.open .caret{transform:rotate(90deg)}
+  .dbhdr .dbn{font-weight:650;font-family:var(--mono)}
+  .dbhdr .cnt{margin-left:auto;color:var(--mut);font-size:11px}
+  .dbgroup{display:none}.dbgroup.open{display:block}
+  .item.task{padding:6px 12px 6px 24px}
+  /* column resizers */
+  .resizer{width:5px;cursor:col-resize;background:transparent;flex:0 0 5px}
+  .resizer:hover,.resizer.drag{background:var(--acc)}
+  #mid{width:340px;display:flex;flex-direction:column;background:var(--panel);overflow:auto}
+  #detail{padding:12px 14px;border-bottom:1px solid var(--line)}
+  #detail .q{font-size:13px;line-height:1.5;margin:6px 0}
+  .lbl{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-top:6px}
+  #controls{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  button{background:var(--acc);color:#fff;border:0;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+  button:disabled{opacity:.5;cursor:default}
+  button.ghost{background:var(--panel2);color:var(--fg);border:1px solid var(--line)}
+  button.replay{background:#6b4fb0}
+  #kbwrap{padding:10px 14px}
+  #kbhead{display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+  #kblist{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+  .kb{border:1px solid var(--line);border-radius:7px;padding:7px 9px;font-size:12px;background:var(--panel2)}
+  .kb.sel{border-color:#3a6;background:#15241c}
+  .kb .kname{font-weight:650;font-size:12.5px}
+  .kb .ksel{font-size:10px;color:var(--grn);float:right}
+  .kb .kdef{color:#cfd6e6;font-family:var(--mono);font-size:11px;margin-top:3px;white-space:pre-wrap}
+  .kb .kdesc{color:var(--mut);font-size:11.5px;margin-top:2px}
+  #right{flex:1;display:flex;flex-direction:column;min-width:0}
+  #stream{flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+  /* agent state-machine / phase overview */
+  #fsm{display:none;flex-direction:column;gap:7px;padding:10px 14px;border-bottom:1px solid var(--line);
+       background:linear-gradient(180deg,rgba(40,52,74,.35),transparent)}
+  #fsm.on{display:flex}
+  #fsm .steps{display:flex;align-items:center;gap:0;flex-wrap:wrap}
+  #fsm .step{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--mut);white-space:nowrap}
+  #fsm .step .dot{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line);
+       display:flex;align-items:center;justify-content:center;font-size:9px;background:var(--bg);transition:.2s}
+  #fsm .step.done{color:var(--fg)} #fsm .step.done .dot{background:var(--grn);border-color:var(--grn);color:#06240f}
+  #fsm .step.active{color:#bfe9ff} #fsm .step.active .dot{border-color:var(--cyan,#46b8d8);
+       background:rgba(70,184,216,.22);box-shadow:0 0 0 3px rgba(70,184,216,.18);animation:fsmpulse 1.3s ease-in-out infinite}
+  #fsm .sep{width:22px;height:1.5px;background:var(--line);margin:0 4px}
+  #fsm .sep.done{background:var(--grn)}
+  #fsm .meta{display:flex;gap:14px;font-size:11px;color:var(--mut)}
+  #fsm .meta b{color:var(--fg);font-weight:600}
+  @keyframes fsmpulse{0%,100%{box-shadow:0 0 0 3px rgba(70,184,216,.10)}50%{box-shadow:0 0 0 5px rgba(70,184,216,.28)}}
+  /* live stats panel (rounds / tokens / tool calls) */
+  #stats{display:none;flex-direction:column;gap:7px;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+  #stats.on{display:flex}
+  #stats .statrow{display:flex;gap:8px}
+  #stats .stat{flex:1;display:flex;flex-direction:column;gap:1px;align-items:center;
+       border:1px solid var(--line);border-radius:8px;padding:6px 4px;background:var(--bg)}
+  #stats .stat.clickable{cursor:pointer} #stats .stat.clickable:hover{border-color:var(--cyan)}
+  #stats .stat .v{font-size:17px;font-weight:700;color:var(--cyan);font-variant-numeric:tabular-nums}
+  #stats .stat .k{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+  #stats .caret2{font-size:11px;color:var(--mut)}
+  #toolbd{display:flex;flex-wrap:wrap;gap:6px 12px;padding:4px 2px}
+  #toolbd .tbd{font-size:11px;color:var(--mut)} #toolbd .tbd code{color:var(--fg)} #toolbd .tbd b{color:var(--cyan)}
+  /* task-list pass/full mode bar */
+  .modebar{display:flex;gap:6px;padding:6px 8px;position:sticky;top:0;background:var(--bg);z-index:2}
+  .modebtn{flex:1;font-size:11px;padding:5px 6px;border:1px solid var(--line);border-radius:7px;
+       background:var(--panel);color:var(--mut);cursor:pointer}
+  .modebtn.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+  /* trajectory toolbar + collapsible failed submits */
+  #trajbar{display:none;justify-content:flex-end;gap:6px;padding:6px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+  #trajbar.on{display:flex}
+  #collapseBtn{font-size:11px;padding:4px 9px}
+  .submitev{border-left:3px solid var(--line)}
+  .submitev.subok{border-left-color:var(--grn)}
+  .submitev.subfail{border-left-color:var(--red)}
+  .subhead{cursor:pointer;display:flex;align-items:center;gap:7px}
+  .subbadge{font-size:10.5px;padding:1px 7px;border-radius:10px;font-weight:600}
+  .subbadge.ok{background:rgba(62,207,142,.18);color:var(--grn)}
+  .subbadge.fail{background:rgba(255,107,107,.16);color:var(--red)}
+  .evtoggle{margin-left:auto;color:var(--mut)}
+  .submitev .evtoggle::before{content:"▾"}
+  .submitev.collapsed .evtoggle::before{content:"▸"}
+  .submitev.collapsed .evbody{display:none}
+  /* SQL syntax highlighting */
+  .sqlkw{color:#7aa2ff;font-weight:600} .sqlfn{color:#5ad1c5} .sqlstr{color:#e5c07b}
+  .sqlnum{color:#d19a66} .sqlcom{color:#6b7385;font-style:italic} .sqlpunc{color:#9aa3b5}
+  .ev{border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:12.5px;background:var(--panel);animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+  .ev .h{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--mut);margin-bottom:4px}
+  .ev .tname{font-weight:700;font-family:var(--mono);font-size:12px}
+  .ev pre{margin:4px 0 0;white-space:pre-wrap;word-break:break-word;font-family:var(--mono);
+          font-size:11.5px;line-height:1.45;color:#cfd6e6;max-height:260px;overflow:auto}
+  .ev.tool_call{border-left:3px solid var(--acc)}
+  .ev.tool_call.sql{border-left:3px solid var(--cyan)}
+  .ev.assistant_text{border-left:3px solid var(--pur);background:var(--panel2)}
+  .ev.user_sim{border-left:3px solid var(--yel);background:#241f12}
+  .ev.phase_pass{border-left:3px solid var(--grn);background:#13241c}
+  .ev.phase_fail{border-left:3px solid var(--red);background:#241515}
+  .ev.status{border-style:dashed;color:var(--mut)}.ev.final{border-left:3px solid var(--grn)}
+  .turn{margin-left:auto;font-family:var(--mono)}.sql{color:#9ad}
+  .empty{color:var(--mut);text-align:center;margin-top:60px;font-size:13px}
+  .verdict{display:flex;gap:18px;font-size:13px}.verdict b{font-size:16px}
+  /* schema diagram */
+  #schemawrap{padding:10px 14px;border-top:1px solid var(--line)}
+  #schemahead{display:flex;justify-content:space-between;align-items:center}
+  #schema{margin-top:8px;overflow:auto;max-height:46vh;border:1px solid var(--line);
+          border-radius:8px;background:#0c0e14}
+  #schema svg{display:block}
+  .tbox{cursor:default}
+  .tbox rect{fill:var(--panel2);stroke:var(--line)}
+  .tbox .thdr{fill:#22304d}
+  .tbox text{fill:var(--fg);font:11px var(--mono)}
+  .tbox text.col{fill:#cfd6e6}
+  .tbox text.pk{fill:var(--yel)}
+  .tbox text.fk{fill:var(--cyan)}
+  .fkline{stroke:#4a5a7a;stroke-width:1;fill:none;marker-end:url(#arrow)}
+  /* right-edge collapsible user-sim drawer */
+  #usdrawer{position:fixed;right:0;top:46px;bottom:0;display:flex;z-index:50;
+            transform:translateX(100%);transition:transform .2s ease}
+  #usdrawer.open{transform:translateX(0)}
+  #ustab{position:absolute;left:-30px;top:40%;width:30px;background:#241f12;
+         border:1px solid var(--yel);border-right:0;border-radius:8px 0 0 8px;
+         color:var(--yel);writing-mode:vertical-rl;text-orientation:mixed;
+         padding:10px 4px;cursor:pointer;font-size:12px;user-select:none}
+  #uspanel{width:min(360px,80vw);background:#241f12;border-left:1px solid var(--yel);
+           display:flex;flex-direction:column;box-shadow:-6px 0 24px rgba(0,0,0,.5)}
+  #uspanel .uh{display:flex;justify-content:space-between;align-items:center;
+               padding:9px 12px;border-bottom:1px solid #4a3f1a;font-size:12px;color:var(--yel)}
+  #uspanel .uh .x{cursor:pointer;color:var(--mut)}
+  #usbody{overflow:auto;padding:8px 11px;display:flex;flex-direction:column;gap:6px;flex:1}
+  #usbody .um{font-size:12px;line-height:1.4}
+  #usbody .um .who{font-weight:700;font-size:11px}
+  #usbody .um.agent .who{color:var(--pur)}
+  #usbody .um.user .who{color:var(--yel)}
+  #usbody pre{margin:2px 0 0;white-space:pre-wrap;font-family:var(--mono);font-size:11px;color:#e6ddc2}
+  /* answer-key modal */
+  #ansmodal,#helpmodal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;z-index:100;
+            align-items:center;justify-content:center}
+  #ansmodal.show,#helpmodal.show{display:flex}
+  #ansmodal .card,#helpmodal .card{width:min(760px,92vw);max-height:84vh;background:var(--panel);
+                  border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column}
+  #helpmodal .ah{display:flex;justify-content:space-between;align-items:center;
+                 padding:11px 15px;border-bottom:1px solid var(--line);font-size:13px;color:var(--cyan)}
+  #helpbody{overflow:auto;padding:6px 18px 16px}
+  /* bird-interact header badge icon */
+  .bi-icon{height:20px;width:20px;border-radius:50%;object-fit:cover;vertical-align:middle}
+  .bibadge .bf{opacity:.8}
+  #ansmodal .ah{display:flex;justify-content:space-between;align-items:center;
+                padding:11px 15px;border-bottom:1px solid var(--line);font-size:13px;color:var(--pur)}
+  .ah .x{cursor:pointer;color:var(--mut);background:none;border:0;font:inherit;padding:2px 6px;border-radius:4px}
+  .ah .x:hover{color:#fff}
+  .ah .x:focus-visible{outline:2px solid var(--pur);outline-offset:1px;color:#fff}
+  #ansbody{overflow:auto;padding:14px 16px}
+  #ansbody .lbl{margin-top:10px}
+  #ansbody pre.gtsql{background:#0c0e14;border:1px solid var(--line);border-radius:7px;
+                     padding:9px 11px;white-space:pre-wrap;font-family:var(--mono);
+                     font-size:12px;color:#9ad;line-height:1.45;margin-top:4px}
+  #ansbody .zh{white-space:pre-wrap;font-size:13px;line-height:1.6;color:#e6e9ef;margin-top:4px}
+  /* rendered-markdown analysis (not pre-wrap; real headings/lists) */
+  #ansbody .zh.md{white-space:normal}
+  .zh.md h3{font-size:13.5px;color:var(--cyan);margin:14px 0 4px;font-weight:700}
+  .zh.md h4{font-size:12.5px;color:var(--acc);margin:10px 0 3px;font-weight:700}
+  .zh.md p{margin:5px 0}
+  .zh.md ul,.zh.md ol{margin:4px 0 8px;padding-left:20px}
+  .zh.md li{margin:2px 0}
+  .zh.md b{color:#fff}
+  .zh.md code{font-family:var(--mono);font-size:12px;background:#2a2f3d;padding:1px 5px;border-radius:4px;color:#9ad}
+  .zh.md pre.sql{margin:6px 0;padding:8px 10px;background:#1b1f29;border-radius:6px;white-space:pre-wrap;font-family:var(--mono);font-size:11.5px;line-height:1.45;overflow:auto}
+  /* tool-call args/result blocks: consistent label + spacing */
+  .ev .evpart{margin-top:6px}
+  .ev .plabel{font-size:10.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
+  /* texLite math rendering (LaTeX subset) */
+  .math{font-family:var(--mono);color:#dfe6f2}
+  .math sup{font-size:.72em} .math sub{font-size:.72em}
+  .fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 .18em}
+  .fr .nu{border-bottom:1px solid currentColor;padding:0 .35em;line-height:1.25}
+  .fr .de{padding:0 .35em;line-height:1.25}
+  /* SQL result rendered as a real table */
+  .restbl-wrap{overflow:auto;max-height:300px;margin-top:2px;border:1px solid var(--line);border-radius:6px}
+  .restbl{border-collapse:collapse;font-family:var(--mono);font-size:11px;width:100%}
+  .restbl th,.restbl td{border:1px solid var(--line);padding:3px 8px;text-align:left;white-space:nowrap}
+  .restbl th{background:#222838;color:#dfe6f2;position:sticky;top:0;font-weight:700}
+  .restbl td{color:#cfd6e6}
+  .restbl tbody tr:nth-child(even){background:rgba(255,255,255,.025)}
+  /* SQL error box */
+  .errbox{border:1px solid var(--red);background:#241515;border-radius:6px;padding:7px 10px;margin-top:2px;
+          font-family:var(--mono);font-size:11.5px;line-height:1.45;color:#ffb3b3;white-space:pre-wrap;word-break:break-word}
+  /* JSON-array chip grid (e.g. KB name lists) */
+  .chipgrid{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px;max-height:300px;overflow:auto}
+  .chip{background:#222838;border:1px solid var(--line);border-radius:11px;padding:2px 9px;
+        font-size:11px;color:#cfd6e6;white-space:nowrap}
+  /* table-detail popover (schema sample data) */
+  #tblmodal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;z-index:100;
+            align-items:center;justify-content:center}
+  #tblmodal.show{display:flex}
+  #tblmodal .card{width:min(900px,94vw);max-height:84vh;background:var(--panel);
+                  border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column}
+  #tblmodal .ah{display:flex;justify-content:space-between;align-items:center;
+                padding:11px 15px;border-bottom:1px solid var(--line);font-size:13px;color:var(--cyan)}
+  #tblbody{overflow:auto;padding:12px 14px}
+  #tblbody table{border-collapse:collapse;font-family:var(--mono);font-size:11px;width:100%}
+  #tblbody th,#tblbody td{border:1px solid var(--line);padding:3px 7px;text-align:left;white-space:nowrap}
+  #tblbody th{background:#22304d;color:var(--fg);position:sticky;top:0}
+  #tblbody .coltype{color:var(--mut);font-size:10px}
+  .tbox rect.thdr{cursor:pointer}
+  .tbox text:first-of-type{cursor:pointer}
+</style>
+<meta name="description" content="Explore 900 BIRD-Interact tasks and replay 2,083 PASCAL and ReAct trajectories in your browser. EMNLP 2026.">
+<script src="static-adapter.js"></script>
+<style>header{flex-wrap:wrap;gap:8px}a.demo-link{color:var(--cyan);font-size:12px;text-decoration:none;border:1px solid var(--line);border-radius:6px;padding:6px 9px}.webnote{font-size:12px;color:var(--mut);padding:7px 16px;border-bottom:1px solid var(--line)}@media(max-width:760px){body{height:auto;min-height:100vh}header .sub{display:none}main{display:block}#left,#mid,#right{width:100%!important;max-width:none!important}#left{max-height:40vh}#mid{max-height:65vh}.resizer{display:none}#right{min-height:50vh}#uspanel{width:min(350px,85vw)}}</style>
+</head>
+<body>
+<header>
+  <h1><a href="https://github.com/authurlord/PASCAL_Release" target="_blank" rel="noopener" class="hlink" title="PASCAL code release">PASCAL</a></h1>
+  <a href="https://bird-interact.github.io/" target="_blank" rel="noopener" class="bibadge" title="BIRD-Interact benchmark">
+    <span class="bf" data-i18n="benchFrom">benchmark from</span>
+    <img class="bi-icon" src="bird-interact.png" alt="BIRD-Interact"
+         onerror="this.replaceWith(document.createTextNode('🐦'))">
+    <b>BIRD-Interact</b></a>
+  <span class="sub" data-i18n="subtitle">interactive text-to-SQL · agent trajectory</span>
+  <select id="archiveSelect" onchange="changeArchive(this.value)" style="max-width:230px;background:#162238;color:#eee;padding:7px;border-radius:6px">
+<option value="frozen">PASCAL frozen · 900</option><option value="submitted">PASCAL submitted NVD · 893</option><option value="react">ReAct NVD · lite 290 only</option></select>
+<a class="demo-link" href="https://aclanthology.org/2026.emnlp-main.465/" target="_blank" rel="noopener">Paper · ACL</a>
+<a class="demo-link" href="https://github.com/authurlord/PASCAL_Release" target="_blank" rel="noopener">Code</a>
+<label style="font-size:12px">Replay speed <select id="replaySpeed" aria-label="Replay speed"><option value="1">1×</option><option value="4">4×</option><option value="0">Instant</option></select></label>
+<span id="health" class="badge">checking…</span><span id="model" class="badge"></span>
+  <button id="helpBtn" class="ghost" style="margin-left:auto;padding:4px 10px;font-size:12px" onclick="openHelp()">❓ <span data-i18n="help">Help</span></button>
+  <button id="langBtn" class="ghost" style="padding:4px 10px;font-size:12px" onclick="toggleLang()">中文</button>
+</header>
+<div class="webnote">Browser replay · 存档回放：SQL results and model replies are recorded, not generated live. <a href="DATA_SOURCES.md" style="color:inherit">Data &amp; attribution</a></div>
+<main>
+  <div id="left">
+    <div class="tabs">
+      <div class="tab active" data-split="lite">lite_300</div>
+      <div class="tab" data-split="full">full_600</div>
+    </div>
+    <div id="list"></div>
+  </div>
+  <div class="resizer" data-rz="left"></div>
+  <div id="mid">
+    <div id="detail"><div class="empty">Select a task.</div></div>
+    <div id="schemawrap"></div>
+    <div id="kbwrap"></div>
+  </div>
+  <div class="resizer" data-rz="mid"></div>
+  <div id="right"><div id="fsm"></div><div id="stats"></div>
+    <div id="stream"><div class="empty">Trajectory streams here.</div></div></div>
+</main>
+<!-- right-edge collapsible user-sim drawer -->
+<div id="usdrawer">
+  <div id="ustab" onclick="toggleDrawer()"><span data-i18n="drawerTab">🧑 user sim</span></div>
+  <div id="uspanel">
+    <div class="uh"><span data-i18n="usim">user simulator · clarifications</span>
+      <span class="x" onclick="toggleDrawer(false)">✕</span></div>
+    <div id="usbody"></div>
+  </div>
+</div>
+<!-- answer-key popup modal (presenter only) -->
+<div id="ansmodal" role="dialog" aria-modal="true" aria-label="Answer key" onclick="if(event.target===this)closeAns()">
+  <div class="card">
+    <div class="ah"><span data-i18n="answerTitle">Answer key</span>
+      <button class="x" type="button" aria-label="close" onclick="closeAns()">✕</button></div>
+    <div id="ansbody"></div>
+  </div>
+</div>
+<!-- table sample-data modal -->
+<div id="tblmodal" role="dialog" aria-modal="true" aria-label="Sample rows" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="card">
+    <div class="ah"><span id="tbltitle"></span>
+      <button class="x" type="button" aria-label="close" onclick="document.getElementById('tblmodal').classList.remove('show')">✕</button></div>
+    <div id="tblbody"></div>
+  </div>
+</div>
+<!-- help modal (bilingual) -->
+<div id="helpmodal" role="dialog" aria-modal="true" aria-label="Help" onclick="if(event.target===this)closeHelp()">
+  <div class="card">
+    <div class="ah"><span data-i18n="help">Help</span>
+      <button class="x" type="button" aria-label="close" onclick="closeHelp()">✕</button></div>
+    <div id="helpbody" class="zh md"></div>
+  </div>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+let split="lite",sel=null,es=null,tasks={lite:[],full:[]},activeSplit="lite";
+let lang=localStorage.getItem("pascalLang")||"en";
+let listMode=localStorage.getItem("pascalListMode")||"pass";  // pass = anchor-P1-passed only
+
+const I18N={
+  en:{subtitle:"interactive text-to-SQL · agent trajectory",
+    run:"▶ Run agent (live)",replay:"⏮ Replay anchor",stop:"■ Stop",
+    q1:"Q1.",q2:"Q2 (follow-up).",gt:"Ground truth (gold SQL)",
+    gtP1:"Phase 1",gtP2:"Phase 2 (follow-up)",analysis:"中文需求解析 (Chinese analysis)",
+    genAnalysis:"Read cached 中文 analysis",generating:"generating…",
+    kb:"knowledge base",schema:"schema",required:"required",entries:"entries",
+    usim:"user simulator · clarifications",runHint:"Press “Replay anchor” to watch the stored trajectory.",
+    selectTask:"Select a task.",streamHere:"Trajectory streams here.",langBtn:"中文",
+    help:"Help",benchFrom:"benchmark from",
+    answerBtn:"📖 Answer key",answerTitle:"Answer key (presenter only — not shown to the agent)",
+    clearQ:"Clear requirement",close:"Close",drawerTab:"🧑 user sim",sampleRows:"sample rows",
+    fsmExplore:"Explore",fsmClarify:"Clarify",fsmSubmit1:"Submit P1",fsmPhase2:"Phase 2",fsmDone:"Done",
+    fsmPhase:"phase",fsmTurn:"turn",fsmLast:"last",
+    modePass:"✓ passed",modeFull:"all",noPassTasks:"No anchor-P1-passed tasks in this split.",
+    stToolCalls:"tool calls",stSteps:"agent steps",stTokens:"≈ tokens",refresh:"⟳ refresh",
+    kbShowMore:"other KB (not required)",kbHideMore:"hide other KB",kbNoneRequired:"No KB required for this task.",
+    failedSubmit:"failed submit",args:"args",result:"result"},
+  zh:{subtitle:"交互式 text-to-SQL · 智能体轨迹",
+    run:"▶ 运行智能体（实时）",replay:"⏮ 回放标准轨迹",stop:"■ 停止",
+    q1:"问题1.",q2:"问题2（追问）.",gt:"标准答案（参考 SQL）",
+    gtP1:"第一阶段",gtP2:"第二阶段（追问）",analysis:"中文需求解析",
+    genAnalysis:"读取中文解析",generating:"生成中…",
+    kb:"知识库",schema:"数据库结构",required:"必需",entries:"条",
+    usim:"用户模拟器 · 澄清对话",runHint:"点击「回放标准轨迹」查看已存档的工具调用与结果。",
+    selectTask:"请选择一个任务。",streamHere:"轨迹将在此处实时显示。",langBtn:"EN",
+    help:"帮助",benchFrom:"benchmark 来自",
+    answerBtn:"📖 答案解析",answerTitle:"答案解析（仅供讲解，不会提供给智能体）",
+    clearQ:"清晰版需求",close:"关闭",drawerTab:"🧑 用户模拟",sampleRows:"样例数据",
+    fsmExplore:"探索",fsmClarify:"澄清",fsmSubmit1:"提交一阶段",fsmPhase2:"第二阶段",fsmDone:"完成",
+    fsmPhase:"阶段",fsmTurn:"轮次",fsmLast:"最近",
+    modePass:"✓ 已通过",modeFull:"全部",noPassTasks:"该划分没有 anchor-P1 通过的任务。",
+    stToolCalls:"工具调用",stSteps:"智能体步数",stTokens:"≈ 词元",refresh:"⟳ 刷新",
+    kbShowMore:"其它 KB（非必需）",kbHideMore:"收起其它 KB",kbNoneRequired:"本题不需要 KB。",
+    failedSubmit:"失败提交",args:"参数",result:"结果"}
+};
+let _ans=null;
+function t2(k){return (I18N[lang]&&I18N[lang][k])||I18N.en[k]||k;}
+const t=t2;  // alias; inside selectTask `t` is shadowed by the task object, use t2 there
+function toggleLang(){lang=lang==="en"?"zh":"en";localStorage.setItem("pascalLang",lang);applyLang();}
+function applyLang(){
+  $("#langBtn").textContent=t("langBtn");
+  document.querySelectorAll("[data-i18n]").forEach(el=>{el.textContent=t(el.dataset.i18n);});
+  if($("#fsm")&&$("#fsm").classList.contains("on"))renderFSM();
+  if($("#stats")&&$("#stats").classList.contains("on"))renderStats();
+  if(sel)selectTask(sel);   // re-render the detail panel in the new language
+  if($("#helpmodal")&&$("#helpmodal").classList.contains("show"))$("#helpbody").innerHTML=mdToHtml(HELP[lang]||HELP.en);
+}
+
+let listEpoch=0,selectionEpoch=0;
+let demoLive=false;
+let archiveSet="frozen";
+const originalFetch=window.fetch.bind(window);
+window.fetch=(input,init)=>{
+  if(typeof input==='string' && /^\/api\/(tasks|has_replay)(\?|$)/.test(input)) input+=(input.includes('?')?'&':'?')+'archive='+archiveSet;
+  return originalFetch(input,init);
+};
+function changeArchive(value){
+  ++selectionEpoch; $("#fsm").classList.remove("on"); $("#stats").classList.remove("on");
+  archiveSet=value;
+  if(es){es.close();es=null;endRun();}
+  sel=null;tasks.lite=[];tasks.full=[];
+  $("#detail").innerHTML="";$("#stream").innerHTML="";
+  $("#schemawrap").innerHTML="";$("#kbwrap").innerHTML="";
+  loadList(value==='react'?'lite':split);
+}
+async function health(){
+  try{
+    const h=await(await fetch("/api/health")).json();const b=$("#health");
+    demoLive=!!h.live_enabled;
+    if(h.ok){b.textContent=demoLive?"services up":"browser replay ready";b.className="badge ok";}else{b.textContent="services down";b.className="badge bad";}
+    if(h.active_split)activeSplit=h.active_split;
+    const pg=h.pg_port?` · PG ${h.pg_port}`:"";
+    $("#model").textContent=(h.agent_model||"")+(h.active_split?` · split ${h.active_split}${pg}`:"");
+    document.querySelectorAll(".tab").forEach(t=>{const on=t.dataset.split===activeSplit;t.style.opacity=(!demoLive||on)?"1":"0.45";
+      t.title=(!demoLive||on)?"":"DBs for this split aren't loaded; relaunch with DATASET="+t.dataset.split;});
+  }catch(e){$("#health").textContent="data unavailable — reload to retry";$("#health").className="badge bad";}
+}
+async function loadList(sp){
+  const requestEpoch=++listEpoch;
+  if(split!==sp){
+    ++selectionEpoch; $("#fsm").classList.remove("on"); $("#stats").classList.remove("on");   // codex P1: switching split must clear stale selection/panels/stream (else Run uses old id on new split)
+    if(es){es.close();es=null;endRun();}
+    sel=null;
+    const det=$("#detail");if(det)det.innerHTML="";
+    const sw=$("#schemawrap");if(sw)sw.innerHTML="";
+    const kw=$("#kbwrap");if(kw)kw.innerHTML="";
+    const us=$("#usbody");if(us)us.innerHTML="";const ud=$("#usdrawer");if(ud)ud.classList.remove("open");
+    const st=$("#stream");if(st)st.innerHTML=`<div class="empty">${esc(t2("runHint"))}</div>`;
+  }
+  split=sp;document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.split===sp));
+  if(!tasks[sp].length){const result=await(await fetch("/api/tasks?split="+sp)).json(); if(requestEpoch!==listEpoch)return; tasks[sp]=result;}
+  if(requestEpoch!==listEpoch)return;
+  const groups=tasks[sp];
+  const total=groups.reduce((a,g)=>a+g.n,0);
+  document.querySelector(`.tab[data-split="${sp}"]`).textContent=(sp==="lite"?"lite_300":"full_600")+" · "+total;
+  const L=$("#list");L.innerHTML="";
+  // mode bar: pass (anchor-P1-passed only) vs full (all)
+  const bar=document.createElement("div");bar.className="modebar";
+  const passN=groups.reduce((a,g)=>a+g.tasks.filter(t=>t.archive_p1===true).length,0);
+  bar.innerHTML=`<button class="modebtn ${listMode==='pass'?'on':''}" onclick="setMode('pass')">${esc(t2('modePass'))} · ${passN}</button>`+
+    `<button class="modebtn ${listMode==='full'?'on':''}" onclick="setMode('full')">${esc(t2('modeFull'))} · ${total}</button>`;
+  L.appendChild(bar);
+  const keep=t=>listMode==='full'||t.archive_p1===true;
+  let shown=0;
+  groups.forEach(g=>{
+    const gt=g.tasks.filter(keep); if(!gt.length)return;
+    shown+=gt.length;
+    const np1=gt.filter(t=>t.archive_p1===true).length;
+    const np2=gt.filter(t=>t.archive_p2===true).length;
+    const hdr=document.createElement("div");hdr.className="dbhdr";hdr.dataset.db=g.database;
+    hdr.innerHTML=`<span class="caret">▶</span><span class="dbn">${esc(g.database)}</span>
+      <span class="cnt">${gt.length} · P1 ${np1} / P2 ${np2}</span>`;
+    const box=document.createElement("div");box.className="dbgroup";box.dataset.db=g.database;
+    gt.forEach(t=>{
+      const d=document.createElement("div");d.className="item task";d.dataset.id=t.instance_id;
+      const cl=t.category==="Query"?"bi":t.category==="Management"?"dm":"";
+      const p1=t.archive_p1===true?'<span class="pill p1">P1✓</span>':t.archive_p1===false?'<span class="pill p0">P1✗</span>':'';
+      const p2=t.archive_p2===true?'<span class="pill p1">P2✓</span>':t.archive_p2===false?'<span class="pill p0">P2✗</span>':'';
+      d.innerHTML=`<div class="id">${esc(t.instance_id)}</div><div class="meta">
+        <span class="pill ${cl}">${t.cat_label}</span>
+        <span class="pill">${esc(t.difficulty||'?')}</span>${p1}${p2}</div>`;
+      d.onclick=()=>selectTask(t.instance_id);box.appendChild(d);
+    });
+    hdr.onclick=()=>{const open=box.classList.toggle("open");hdr.classList.toggle("open",open);};
+    L.appendChild(hdr);L.appendChild(box);
+  });
+  if(!shown){const e=document.createElement("div");e.className="empty";e.style.padding="14px";
+    e.textContent=t2('noPassTasks');L.appendChild(e);}
+}
+function setMode(m){listMode=m;localStorage.setItem("pascalListMode",m);loadList(split);}
+function esc(s){return(s||"").replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+async function selectTask(id){
+  const requestEpoch=++selectionEpoch; $("#fsm").classList.remove("on"); $("#stats").classList.remove("on");
+  if(es){es.close();es=null;endRun();}   // codex P0: switching task stops any live run so its events don't bleed into the new task
+  sel=id;document.querySelectorAll(".item").forEach(i=>i.classList.toggle("sel",i.dataset.id===id));
+  const t=await(await fetch(`/api/task?split=${split}&id=${encodeURIComponent(id)}`)).json();
+  const rep=await(await fetch(`/api/has_replay?split=${split}&id=${encodeURIComponent(id)}`)).json();
+  if(sel!==id||requestEpoch!==selectionEpoch)return;   // codex P1: a newer task was clicked mid-fetch — abort this stale render
+  // GT + Chinese analysis are PRESENTER-ONLY (never sent to the agent): one
+  // per-task button opens a popup "answer key" modal.
+  _ans={id, gt:t.gt_sql||"", gtfu:t.gt_sql_followup||"", q:t.query||t.amb_user_query||"", fq:t.follow_up_query||""};
+  $("#detail").innerHTML=`
+    <div class="lbl">${split} · ${t.database} · ${t.category||'?'} · ${t.difficulty||'?'}</div>
+    <div class="q"><b>${esc(t2("q1"))}</b> ${esc(t.amb_user_query||t.query||'')}</div>
+    ${t.follow_up_query?`<div class="q"><b>${esc(t2("q2"))}</b> ${esc(t.follow_up_query)}</div>`:''}
+    <div id="controls">
+      <a class="demo-link" href="https://github.com/authurlord/PASCAL_Release#quick-start" target="_blank" rel="noopener">Live setup ↗</a>
+      ${rep.available?`<button id="repBtn" class="replay" onclick="replayTask()">${esc(t2("replay"))}</button>`:''}
+      <button id="stopBtn" class="ghost" onclick="stopRun()" disabled>${esc(t2("stop"))}</button>
+      <button class="ghost" style="background:#234a47;border:1px solid #3a8a7a;color:#bfeee2" onclick="openAns()">${esc(t2("answerBtn"))}</button>
+    </div>`;
+  loadSchema(id);
+  loadKB(id);
+  $("#usbody").innerHTML="";$("#usdrawer").classList.remove("open");
+  $("#stream").innerHTML=`<div class="empty">${esc(t2("runHint"))}</div>`;
+}
+let _schemaTables={};   // name -> {columns, sample} for the table modal
+async function loadSchema(id){
+  const requestEpoch=selectionEpoch;
+  const w=$("#schemawrap");w.innerHTML=`<div class="lbl">${esc(t2("schema"))}…</div>`;
+  try{
+    const s=await(await fetch(`/api/schema?split=${split}&id=${encodeURIComponent(id)}`)).json();
+    if(sel!==id||requestEpoch!==selectionEpoch)return;   // codex P1: stale-response guard (fast task switching)
+    const tbl=s.tables||[],fks=s.fks||[];
+    if(!tbl.length){w.innerHTML=`<div class="lbl">${esc(t2("schema"))}</div><pre style="white-space:pre-wrap">${esc(s.raw||"—")}</pre>`;return;}
+    _schemaTables={};tbl.forEach(t=>_schemaTables[t.name]=t);
+    // OPEN by default (rendered immediately); click the header to collapse.
+    const cap=db=>`${t2("schema")} · ${db} · ${tbl.length} tables · ${fks.length} FKs`;
+    w.innerHTML=`<div id="schemahead" class="lbl" style="cursor:pointer">▾ ${esc(cap(s.database))}</div>
+      <div id="schema"></div>`;
+    const sc=$("#schema");sc.innerHTML=schemaSVG(tbl,fks);sc.dataset.rendered="1";bindTableClicks();
+    const hd=$("#schemahead");
+    hd.onclick=()=>{const open=sc.style.display==="none";
+      sc.style.display=open?"block":"none";
+      hd.textContent=(open?"▾ ":"▸ ")+cap(s.database);};
+  }catch(e){w.innerHTML=`<div class="lbl">${esc(t2("schema"))} —</div>`;}
+}
+function bindTableClicks(){
+  document.querySelectorAll("#schema g.tbox").forEach(g=>{
+    g.style.cursor="pointer";
+    g.onclick=()=>showTable(g.dataset.t);});
+}
+function showTable(name){
+  const t=_schemaTables[name];if(!t)return;
+  $("#tbltitle").textContent=name+" · "+t.columns.length+" columns";
+  let cols=`<div class="lbl">columns</div><table><tr><th>column</th><th>type</th><th>key</th></tr>`+
+    t.columns.map(c=>`<tr><td>${esc(c.name)}</td><td class="coltype">${esc(c.type||'')}</td><td>${c.pk?'🔑 PK':c.fk?'↗ FK':''}</td></tr>`).join("")+`</table>`;
+  const hdr=`<div class="lbl" style="margin-top:12px;display:flex;align-items:center;gap:8px">
+      <span>${t2('sampleRows')}</span>
+      <span style="font-size:11px">archived sample</span></div>`;
+  const samp=t.sample?sampleTable(t.sample):'<div class="lbl">—</div>';
+  $("#tblbody").innerHTML=cols+hdr+`<div id="tblsample">${samp}</div>`;
+  $("#tblmodal").classList.add("show");
+}
+// Pull 3 fresh random rows for this table from the live PG DB.
+async function refreshSample(name){
+  const box=$("#tblsample");if(box)box.innerHTML=`<div class="lbl">${esc(t2('generating'))}</div>`;
+  try{
+    const r=await(await fetch(`/api/sample?split=${split}&id=${encodeURIComponent(sel)}&table=${encodeURIComponent(name)}`)).json();
+    if(!box)return;
+    if(r.error||!r.columns||!r.columns.length){box.innerHTML=`<div class="lbl">${esc(r.error||'no rows')}</div>`;return;}
+    let h=`<div style="overflow:auto;max-height:46vh"><table style="font-size:11px"><tr>`+
+      r.columns.map(c=>`<th>${esc(c)}</th>`).join("")+`</tr>`;
+    r.rows.forEach(row=>{h+=`<tr>`+row.map(v=>`<td style="font-family:var(--mono);color:#cfd6e6">${esc(v)}</td>`).join("")+`</tr>`;});
+    box.innerHTML=h+`</table></div>`;
+  }catch(e){if(box)box.innerHTML=`<div class="lbl">${esc(""+e)}</div>`;}
+}
+// Parse the fixed-width "First N rows" sample block into an HTML table, using the
+// dash-separator line to find column boundaries. Falls back to a <pre> if no
+// separator line is present.
+function sampleTable(raw){
+  const lines=raw.replace(/\r/g,"").split("\n").filter(l=>l.length);
+  // drop a leading "First N rows:" caption if present
+  if(lines.length && /first\s+\d+\s+rows/i.test(lines[0])) lines.shift();
+  const sepIdx=lines.findIndex(l=>/^[\s-]+$/.test(l) && l.includes("-"));
+  if(sepIdx<1) return `<pre style="white-space:pre;overflow:auto;font-family:var(--mono);font-size:11px;color:#cfd6e6">${esc(raw)}</pre>`;
+  // column spans = runs of '-' in the separator line
+  const sep=lines[sepIdx], spans=[]; let re=/-+/g, m;
+  while((m=re.exec(sep))) spans.push([m.index, m.index+m[0].length]);
+  const slice=(line,i)=>{ const [s,e]=spans[i]; const end=(i===spans.length-1)?Math.max(line.length,e):e; return line.slice(s,end).trim(); };
+  const cells=line=>spans.map((_,i)=>slice(line,i));
+  const head=cells(lines[sepIdx-1]);
+  const body=lines.slice(sepIdx+1);
+  let html=`<div style="overflow:auto;max-height:46vh"><table style="font-size:11px"><tr>`+
+    head.map(h=>`<th>${esc(h)}</th>`).join("")+`</tr>`;
+  for(const ln of body){
+    if(/^\.\.\.?$/.test(ln.trim())){ html+=`<tr><td colspan="${head.length}" style="text-align:center;color:var(--mut)">…</td></tr>`; continue; }
+    if(!ln.trim()) continue;
+    html+=`<tr>`+cells(ln).map(c=>`<td style="font-family:var(--mono);color:#cfd6e6">${esc(c)}</td>`).join("")+`</tr>`;
+  }
+  return html+`</table></div>`;
+}
+// Simple grid layout + FK arrows. Compact: header + up to 8 columns per table.
+function schemaSVG(tables,fks){
+  const COLW=200,ROWH=15,HDR=20,PADX=26,PADY=22,GAPX=44,GAPY=34,MAXC=9,perRow=3;
+  const pos={};
+  tables.forEach((t,i)=>{const r=Math.floor(i/perRow),c=i%perRow;
+    const shown=Math.min(t.columns.length,MAXC);
+    pos[t.name]={x:PADX+c*(COLW+GAPX),y:PADY+r*0,h:HDR+shown*ROWH+8,col:c,row:r};});
+  // compute per-row heights so rows don't overlap
+  let y=PADY;const rowH={};
+  tables.forEach((t,i)=>{const r=Math.floor(i/perRow);const shown=Math.min(t.columns.length,MAXC);
+    rowH[r]=Math.max(rowH[r]||0,HDR+shown*ROWH+10);});
+  const rowY={};let acc=PADY;Object.keys(rowH).sort((a,b)=>a-b).forEach(r=>{rowY[r]=acc;acc+=rowH[r]+GAPY;});
+  tables.forEach((t,i)=>{const r=Math.floor(i/perRow);pos[t.name].y=rowY[r];});
+  const W=PADX*2+perRow*COLW+(perRow-1)*GAPX, H=acc+10;
+  let boxes="";
+  tables.forEach(t=>{const p=pos[t.name];const shown=t.columns.slice(0,MAXC);
+    let rows="";shown.forEach((col,j)=>{const cls=col.pk?"pk":col.fk?"fk":"col";
+      const tag=col.pk?" 🔑":col.fk?" ↗":"";
+      rows+=`<text class="${cls}" x="${p.x+8}" y="${p.y+HDR+12+j*ROWH}">${esc((col.name+tag).slice(0,26))}</text>`;});
+    const more=t.columns.length>MAXC?`<text class="col" x="${p.x+8}" y="${p.y+HDR+12+shown.length*ROWH}">… +${t.columns.length-MAXC} more</text>`:"";
+    const bh=HDR+(shown.length+(t.columns.length>MAXC?1:0))*ROWH+8;
+    boxes+=`<g class="tbox" data-t="${esc(t.name)}"><rect x="${p.x}" y="${p.y}" width="${COLW}" height="${bh}" rx="6"/>
+      <rect class="thdr" x="${p.x}" y="${p.y}" width="${COLW}" height="${HDR}" rx="6"/>
+      <text x="${p.x+8}" y="${p.y+14}" style="font-weight:700">${esc(t.name.slice(0,28))}</text>${rows}${more}</g>`;});
+  let lines="";
+  fks.forEach(f=>{const a=pos[f.from_table],b=pos[f.to_table];if(!a||!b)return;
+    const x1=a.x+COLW/2,y1=a.y,x2=b.x+COLW/2,y2=b.y;
+    lines+=`<path class="fkline" d="M${x1},${y1} C${x1},${y1-20} ${x2},${y2-20} ${x2},${y2}"/>`;});
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+    <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#4a5a7a"/></marker></defs>${lines}${boxes}</svg>`;
+}
+function _kbItem(e){
+  const d=document.createElement("div");d.className="kb"+(e.selected?" sel":"");
+  d.innerHTML=`<div class="kname">${esc(e.knowledge)}${e.selected?`<span class="ksel">● ${esc(t2('required'))}</span>`:''}</div>
+    ${e.description?`<div class="kdesc">${esc(e.description)}</div>`:''}
+    ${e.definition?`<div class="kdef">${esc(e.definition)}</div>`:''}`;
+  return d;
+}
+async function loadKB(id){
+  const requestEpoch=selectionEpoch;
+  const w=$("#kbwrap");w.innerHTML='<div class="lbl">knowledge base…</div>';
+  try{
+    const kb=await(await fetch(`/api/kb?split=${split}&id=${encodeURIComponent(id)}`)).json();
+    if(sel!==id||requestEpoch!==selectionEpoch)return;   // codex P1: stale-response guard (fast task switching)
+    const ents=kb.entries||[];const nsel=(kb.selected_ids||[]).length;
+    const req=ents.filter(e=>e.selected), rest=ents.filter(e=>!e.selected);
+    w.innerHTML=`<div id="kbhead"><span class="lbl">KB for ${esc(kb.database)} · ${ents.length} entries · ${nsel} required</span></div>
+      <div id="kblist"></div>
+      ${rest.length?`<div id="kbmore" class="lbl" style="cursor:pointer;margin-top:6px">▸ ${esc(t2('kbShowMore'))} (${rest.length})</div><div id="kbrest" style="display:none"></div>`:''}`;
+    const L=$("#kblist");
+    if(!req.length)L.innerHTML=`<div class="kdesc">${esc(t2('kbNoneRequired'))}</div>`;
+    req.forEach(e=>L.appendChild(_kbItem(e)));
+    if(rest.length){
+      const R=$("#kbrest");rest.forEach(e=>R.appendChild(_kbItem(e)));
+      const mh=$("#kbmore");
+      mh.onclick=()=>{const open=R.style.display==="none";R.style.display=open?"block":"none";
+        mh.textContent=(open?"▾ ":"▸ ")+`${t2(open?'kbHideMore':'kbShowMore')} (${rest.length})`;};
+    }
+  }catch(e){w.innerHTML='<div class="lbl">KB unavailable</div>';}
+}
+function add(cls,html){const s=$("#stream");if(s.querySelector(".empty"))s.innerHTML="";
+  const d=document.createElement("div");d.className="ev "+cls;d.innerHTML=html;s.appendChild(d);s.scrollTop=s.scrollHeight;return d;}
+function isSQL(n){return n==="execute_sql"||n==="submit_sql";}
+function fmt(v){return typeof v==="string"?v:JSON.stringify(v,null,1);}
+// Lightweight SQL syntax highlighter. Tokenizes the RAW sql and escapes each
+// token, so HTML entities never get mis-highlighted.
+const _SQLKW=new Set(("SELECT FROM WHERE GROUP BY ORDER HAVING LIMIT OFFSET JOIN INNER LEFT RIGHT FULL OUTER CROSS "+
+  "ON USING UNION ALL ANY EXCEPT INTERSECT INSERT INTO VALUES UPDATE SET DELETE CREATE TABLE VIEW INDEX DROP ALTER "+
+  "ADD COLUMN PRIMARY KEY FOREIGN REFERENCES DEFAULT NOT NULL UNIQUE CHECK CONSTRAINT AS DISTINCT CASE WHEN THEN "+
+  "ELSE END AND OR IN IS LIKE ILIKE BETWEEN EXISTS WITH RECURSIVE OVER PARTITION ROWS RANGE ASC DESC NULLS FIRST "+
+  "LAST CAST INTERVAL TRUE FALSE RETURNING WINDOW FILTER LATERAL TABLESAMPLE COALESCE NULLIF").split(/\s+/));
+const _SQLFN=new Set(("COUNT SUM AVG MIN MAX ROUND ABS CEIL FLOOR LENGTH LOWER UPPER TRIM SUBSTRING STRING_AGG "+
+  "ARRAY_AGG ROW_NUMBER RANK DENSE_RANK LAG LEAD NTILE COALESCE NULLIF CONCAT NOW EXTRACT DATE_TRUNC TO_CHAR "+
+  "TO_DATE GREATEST LEAST PERCENTILE_CONT JSONB_AGG JSON_AGG REGEXP_REPLACE SPLIT_PART").split(/\s+/));
+function hlSQL(raw){
+  if(!raw)return"";
+  const re=/(--[^\n]*|\/\*[\s\S]*?\*\/)|('(?:''|[^'])*')|("(?:[^"])*")|(\b\d+(?:\.\d+)?\b)|([A-Za-z_][A-Za-z0-9_]*)|(\s+)|([^\sA-Za-z0-9_]+)/g;
+  let out="",m;
+  while((m=re.exec(raw))){
+    if(m[1])out+=`<span class="sqlcom">${esc(m[1])}</span>`;
+    else if(m[2]||m[3])out+=`<span class="sqlstr">${esc(m[2]||m[3])}</span>`;
+    else if(m[4])out+=`<span class="sqlnum">${esc(m[4])}</span>`;
+    else if(m[5]){const w=m[5],up=w.toUpperCase();
+      const next=raw[re.lastIndex]===("(");
+      if(_SQLKW.has(up))out+=`<span class="sqlkw">${esc(w)}</span>`;
+      else if(_SQLFN.has(up)||next)out+=`<span class="sqlfn">${esc(w)}</span>`;
+      else out+=esc(w);}
+    else if(m[6])out+=m[6];
+    else if(m[7])out+=`<span class="sqlpunc">${esc(m[7])}</span>`;
+    else out+=esc(m[0]);
+  }
+  return out;
+}
+// Strip any bird-coin budget notes baked into stored trajectory results.
+// Hide ALL bird-coin / budget strings in the DISPLAY only. The agent's actual
+// run still sees them (anchor-faithful convergence nudge) — we just don't show
+// the user fake currency. Covers: the [SYSTEM NOTE] budget tag, the per-submit
+// "Budget remaining: N bird-coins" line, the "You have a budget of N bird-coins"
+// preamble, and any stray "Cost: N bird-coin(s)" hint.
+function stripBudget(s){return (s||"")
+  .replace(/\n*\[SYSTEM NOTE: Remaining budget:[^\]]*\]/g,"")
+  .replace(/\n*\[SYSTEM NOTE: Remaining budget[^\n]*/g,"")
+  .replace(/\n?[ \t]*Budget remaining:[^\n]*bird-?coins?\.?/gi,"")
+  .replace(/\n?[ \t]*You have a budget of[\s0-9.]*bird-?coins?\.?/gi,"")
+  .replace(/\n?[ \t]*Cost:\s*[0-9.]+\s*bird-?coins?\.?/gi,"")
+  // only strip "N bird-coins" (always budget metadata) — NOT a bare word, which
+  // could in principle be a legitimate DB value / NL answer (codex review #2).
+  .replace(/[ \t]*-?[0-9][0-9.]*\s*bird-?coins?/gi,"")
+  .replace(/\n{3,}/g,"\n\n").trim();}
+function toggleDrawer(force){
+  const d=$("#usdrawer");const open=force===undefined?!d.classList.contains("open"):force;
+  d.classList.toggle("open",open);}
+function pushUS(who,text){
+  if(!text||!(""+text).trim())return;
+  $("#usdrawer").classList.add("open");   // auto-open the drawer when a clarification arrives
+  const b=$("#usbody");const d=document.createElement("div");
+  d.className="um "+(who==="user"?"user":"agent");
+  d.innerHTML=`<span class="who">${who==="user"?"🧑 user":"🤖 agent"}</span><pre>${esc(fmt(text))}</pre>`;
+  b.appendChild(d);b.scrollTop=b.scrollHeight;}
+// ── Answer-key modal (presenter only; GT is never sent to the agent) ──
+function openAns(){
+  if(!_ans)return;
+  const m=$("#ansmodal");
+  $("#ansbody").innerHTML=`
+    <div class="lbl">${esc(t2("clearQ"))}</div><div class="zh">${esc(_ans.q)}${_ans.fq?"\n\n[追问] "+esc(_ans.fq):""}</div>
+    <div class="lbl">${esc(t2("analysis"))}</div>
+    <div id="anslot"><button class="ghost" style="font-size:12px;padding:5px 10px" onclick="genAnalysis('${esc(_ans.id)}')">${esc(t2("genAnalysis"))}</button></div>
+    ${_ans.gt?`<div class="lbl">${esc(t2("gt"))} · ${esc(t2("gtP1"))}</div><pre class="gtsql">${hlSQL(_ans.gt)}</pre>`:''}
+    ${_ans.gtfu?`<div class="lbl">${esc(t2("gt"))} · ${esc(t2("gtP2"))}</div><pre class="gtsql">${hlSQL(_ans.gtfu)}</pre>`:''}`;
+  m.classList.add("show");
+}
+function closeAns(){$("#ansmodal").classList.remove("show");}
+// ---- bilingual help ----
+const HELP={
+en:`## What is this
+PASCAL is a training-free protocol for **interactive text-to-SQL**. This demo visualizes a PASCAL agent solving **BIRD-Interact** tasks: it reads an (often ambiguous) user question, asks the user-simulator to clarify, explores the database, and submits SQL — scored as **Phase 1** (initial query) and **Phase 2** (follow-up).
+
+## Pick a task
+- Top tabs **lite_300 / full_600** are the two BIRD-Interact splits.
+- The **✓ Passed / All** filter: by default only tasks the frozen anchor passed (P1) are shown; switch to *All* for every task.
+- Tasks are grouped by database — click a group to expand.
+
+## Run vs Replay
+- **▶ Run agent (live)** runs the real agent now (Qwen3.6-35B via vLLM). It is **stochastic** (temperature 0.7): a task may pass or fail on any given run.
+- **⏮ Replay anchor** replays the frozen anchor's stored winning trajectory (offline, no GPU). Use this to reliably show a passing run.
+
+## Reading the trajectory
+Each step shows the tool call, its SQL (highlighted) and the result — rendered as a **table**, a **chip grid** (name lists), or a red **error box**. \`ask_user\` exchanges appear in the user-simulator drawer (right edge). Phase verdicts and a final card appear at the end.
+
+## Panels
+- **Schema** — tables / columns / keys; click a table for sample rows.
+- **KB** — domain-knowledge definitions (required ones first).
+- **Answer key** (presenter-only) — gold SQL + a step-by-step Chinese derivation; never sent to the agent.
+- **Stats** — turns / tool-calls / tokens; click tool-calls for a per-tool breakdown.
+
+## Tools the agent can call
+- **get_schema** — returns the full database schema (CREATE TABLE statements).
+- **get_all_column_meanings** / **get_column_meaning(table, column)** — natural-language descriptions of the columns.
+- **get_all_external_knowledge_names** — lists the names of the domain-knowledge (KB) entries available for this DB.
+- **get_knowledge_definition(name)** / **get_all_knowledge_definitions** — the definition/formula of one / of all KB entries.
+- **execute_sql(sql)** — runs a SQL query against the database and returns the rows (for exploration; not graded).
+- **ask_user(question)** — asks the user-simulator a clarifying question about the (often ambiguous) request.
+- **submit_sql(sql)** — submits the final SQL for grading (Phase 1, then Phase 2 after the follow-up).
+- **abstain(reason)** — declares the question cannot be answered from the available schema.
+
+## Notes
+- Reproduction is stochastic (temp 0.7): "passed in the anchor" does **not** mean it passes every live run.`,
+zh:`## 这是什么
+PASCAL 是一个免训练的**交互式 text-to-SQL** 协议。本 demo 可视化 PASCAL 智能体求解 **BIRD-Interact** 任务的全过程：读入（常含歧义的）用户问题、向用户模拟器澄清、探索数据库、提交 SQL —— 按**第一阶段**（初始查询）和**第二阶段**（追问）评分。
+
+## 选择任务
+- 顶部 **lite_300 / full_600** 是两个 BIRD-Interact 数据划分。
+- **✓ 已通过 / 全部** 过滤器：默认只列出冻结 anchor 通过(P1)的任务；切到*全部*可看所有任务。
+- 任务按数据库分组——点组名展开。
+
+## Run（实时）与 Replay（回放）
+- **▶ 运行智能体（实时）**：现场跑真实智能体（Qwen3.6-35B / vLLM）。**随机**（温度 0.7）：同一任务每次跑可能通过也可能失败。
+- **⏮ 回放 anchor**：回放冻结 anchor 里存好的获胜轨迹（离线、不用 GPU）。想稳定展示一个通过案例就用它。
+
+## 看懂轨迹
+每一步显示工具调用、它的 SQL（高亮）和结果——结果会渲染成**表格**、**标签网格**（名称列表）或红色**错误框**。\`ask_user\` 对话出现在右侧用户模拟器抽屉里。阶段判定和最终卡片在结尾显示。
+
+## 各面板
+- **Schema**：数据库表/列/键；点某张表看样例数据。
+- **KB**：领域知识定义（必需的排在前）。
+- **答案解析**（仅讲解用）：标准 SQL + 中文分步推导；绝不发给智能体。
+- **统计**：轮次 / 工具调用 / 词元；点工具调用看按工具细分。
+
+## 智能体可调用的工具
+- **get_schema** —— 返回完整数据库结构（CREATE TABLE 语句）。
+- **get_all_column_meanings** / **get_column_meaning(表, 列)** —— 列的自然语言释义。
+- **get_all_external_knowledge_names** —— 列出本库可用的领域知识(KB)条目名称。
+- **get_knowledge_definition(名称)** / **get_all_knowledge_definitions** —— 某一条 / 全部 KB 的定义/公式。
+- **execute_sql(sql)** —— 在数据库上执行 SQL 并返回结果行（用于探索；不计分）。
+- **ask_user(question)** —— 就（常含歧义的）需求向用户模拟器提澄清问题。
+- **submit_sql(sql)** —— 提交最终 SQL 进行评分（第一阶段，追问后再第二阶段）。
+- **abstain(reason)** —— 声明依据现有 schema 无法回答该问题。
+
+## 说明
+- 复现是随机的（温度 0.7）：「anchor 里通过过」**不等于**每次 live 都通过。`};
+function openHelp(){$("#helpbody").innerHTML=mdToHtml(HELP[lang]||HELP.en);$("#helpmodal").classList.add("show");}
+function closeHelp(){$("#helpmodal").classList.remove("show");}
+// Lightweight LaTeX-subset -> readable HTML (no external lib; works offline).
+// Handles \text \frac \times \cdot ^ _ and the comparison ops used in KB formulas.
+// INPUT MUST ALREADY BE HTML-ESCAPED (we inject <sup>/<sub>/<span> tags).
+function texLite(tex){
+  let s=String(tex).replace(/\$\$?/g,"");          // drop $ / $$ delimiters
+  s=s.replace(/\\(?:text|mathrm|mathit|operatorname)\{([^{}]*)\}/g,"$1");
+  for(let i=0;i<5;i++)                              // \frac{A}{B} -> CSS fraction (loop for nesting)
+    s=s.replace(/\\d?frac\{([^{}]*)\}\{([^{}]*)\}/g,
+      '<span class="fr"><span class="nu">$1</span><span class="de">$2</span></span>');
+  s=s.replace(/\^\{([^{}]*)\}/g,"<sup>$1</sup>").replace(/\^([A-Za-z0-9])/g,"<sup>$1</sup>");
+  s=s.replace(/_\{([^{}]*)\}/g,"<sub>$1</sub>").replace(/_([A-Za-z0-9])/g,"<sub>$1</sub>");
+  s=s.replace(/\\times/g," × ").replace(/\\cdot/g," · ").replace(/\\div/g," ÷ ")
+     .replace(/\\leq?\b/g," ≤ ").replace(/\\geq?\b/g," ≥ ").replace(/\\neq\b/g," ≠ ")
+     .replace(/\\approx\b/g," ≈ ").replace(/\\pm\b/g," ± ").replace(/\\%/g,"%")
+     .replace(/\\left|\\right/g,"").replace(/\\,|\\;|\\!|\\ /g," ");
+  s=s.replace(/[{}]/g,"").replace(/\\([A-Za-z]+)/g,"$1");  // strip leftover braces/commands
+  return s;
+}
+// Render $...$ LaTeX inside ALREADY-ESCAPED text (e.g. tool results / KB JSON,
+// where backslashes are JSON-doubled). No-op when there is no math.
+function mathify(escaped){
+  if(escaped.indexOf("$")<0)return escaped;
+  return escaped.replace(/\$([^$\n]+)\$/g,(_,m)=>'<span class="math">'+texLite(m.replace(/\\\\/g,"\\"))+'</span>');
+}
+// Detect a pipe-delimited SQL result table ("col | col\n--- \nval | val") and
+// render it as a real HTML table. Returns null when the text isn't a table, so
+// the caller falls back to <pre>.
+function tableify(txt){
+  if(typeof txt!=="string"||txt.indexOf("|")<0)return null;
+  const lines=txt.split("\n").filter(l=>l.trim()!=="");
+  if(lines.length<2)return null;
+  const isSep=l=>/-{3,}/.test(l)&&/^[\s|:+-]+$/.test(l);   // ---- or ---|---
+  const rowLines=lines.filter(l=>l.includes("|")&&!isSep(l));
+  if(rowLines.length<2)return null;                        // need header + >=1 data row
+  if(rowLines.length<lines.length*0.6)return null;         // avoid matching prose with a stray '|'
+  const rows=rowLines.map(l=>l.replace(/^\s*\|/,"").replace(/\|\s*$/,"").split("|").map(c=>c.trim()));
+  const ncol=rows[0].length;
+  if(ncol<2||rows.some(r=>Math.abs(r.length-ncol)>1))return null;  // consistent column count
+  const th=rows[0].map(c=>`<th>${esc(c)}</th>`).join("");
+  const trs=rows.slice(1).map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("");
+  return `<div class="restbl-wrap"><table class="restbl"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table></div>`;
+}
+// JSON array of scalars (e.g. get_all_external_knowledge_names) -> wrapped chips,
+// so a 50-item list is a compact multi-row/col grid instead of one huge line.
+function jsonArrayGrid(txt){
+  const t=txt.trim();
+  if(t[0]!=="[")return null;
+  let arr; try{arr=JSON.parse(t);}catch(_){return null;}
+  if(!Array.isArray(arr)||arr.length<2||!arr.every(x=>x===null||["string","number","boolean"].includes(typeof x)))return null;
+  const chips=arr.map(x=>`<span class="chip">${esc(String(x))}</span>`).join("");
+  return `<div class="chipgrid" title="${arr.length} items">${chips}</div>`;
+}
+// Single-column psql result: "header\n-----\nval\nval...". (tableify handles >=2 cols.)
+function singleColTable(txt){
+  if(txt.indexOf("|")>=0)return null;
+  const lines=txt.split("\n").map(l=>l.replace(/\s+$/,"")).filter(l=>l.trim()!=="");
+  if(lines.length<3||!/^-{2,}$/.test(lines[1].trim()))return null;
+  const vals=lines.slice(2).filter(v=>!/^\(\d+ rows?\)$/.test(v.trim()));  // drop "(N rows)" footer
+  if(!vals.length)return null;
+  const trs=vals.map(v=>`<tr><td>${esc(v.trim())}</td></tr>`).join("");
+  return `<div class="restbl-wrap"><table class="restbl"><thead><tr><th>${esc(lines[0].trim())}</th></tr></thead><tbody>${trs}</tbody></table></div>`;
+}
+// Unified tool-result renderer: SQL error box / JSON-array grid / pipe table /
+// single-column table / plain <pre> (with math) — in that order.
+function renderResult(raw){
+  const txt=stripBudget(fmt(raw));
+  if(typeof txt==="string"&&/\bSQL\s*error\b/i.test(txt))
+    return `<div class="errbox">⚠ ${mathify(esc(txt))}</div>`;
+  return jsonArrayGrid(txt)||tableify(txt)||singleColTable(txt)||`<pre>${mathify(esc(txt))}</pre>`;
+}
+// Minimal, XSS-safe markdown → HTML (escape first, then a small subset:
+// ## / ### headings, **bold**, `code`, fenced ```sql blocks, - / 1. lists, $math$).
+function mdToHtml(src){
+  const raw=String(src||"");
+  // pull fenced code blocks out first so their contents aren't markdown-parsed
+  const blocks=[];
+  let s=raw.replace(/```(\w*)\n([\s\S]*?)```/g,(_,lang,code)=>{
+    const i=blocks.length;
+    const inner=/sql/i.test(lang)?hlSQL(code.replace(/\n$/,"")):esc(code.replace(/\n$/,""));
+    blocks.push(`<pre class="sql">${inner}</pre>`);return `B${i}`;});
+  s=esc(s);
+  const lines=s.split("\n");let out=[],list=null;
+  const inline=x=>x.replace(/\$([^$]+)\$/g,(_,m)=>'<span class="math">'+texLite(m)+'</span>')
+                   .replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>")
+                   .replace(/`([^`]+)`/g,'<code>$1</code>');
+  const closeList=()=>{if(list){out.push(`</${list}>`);list=null;}};
+  for(let ln of lines){
+    const ph=ln.match(/^B(\d+)$/);
+    if(ph){closeList();out.push(blocks[+ph[1]]);continue;}
+    let m;
+    if(m=ln.match(/^\s*#{3,}\s+(.*)/)){closeList();out.push(`<h4>${inline(m[1])}</h4>`);}
+    else if(m=ln.match(/^\s*##\s+(.*)/)){closeList();out.push(`<h3>${inline(m[1])}</h3>`);}
+    else if(m=ln.match(/^\s*[-*]\s+(.*)/)){if(list!=="ul"){closeList();out.push("<ul>");list="ul";}out.push(`<li>${inline(m[1])}</li>`);}
+    else if(m=ln.match(/^\s*\d+[.)]\s+(.*)/)){if(list!=="ol"){closeList();out.push("<ol>");list="ol";}out.push(`<li>${inline(m[1])}</li>`);}
+    else if(ln.trim()===""){closeList();}
+    else{closeList();out.push(`<p>${inline(ln)}</p>`);}
+  }
+  closeList();return out.join("");
+}
+async function genAnalysis(id){
+  const slot=$("#anslot");if(slot)slot.innerHTML=`<span class="lbl">${esc(t2("generating"))}</span>`;
+  try{
+    const r=await(await fetch(`/api/analysis?split=${split}&id=${encodeURIComponent(id)}`)).json();
+    if(slot){if(r.analysis_zh)slot.innerHTML=`<div class="zh md">${mdToHtml(r.analysis_zh)}</div>`;
+             else slot.innerHTML=`<div class="zh">${esc(r.error||'(empty)')}</div>`;}
+  }catch(e){if(slot)slot.innerHTML=`<div class="zh">${esc(""+e)}</div>`;}
+}
+// ---- agent state-machine / phase overview ----
+const _FSM_STEPS=["fsmExplore","fsmClarify","fsmSubmit1","fsmPhase2","fsmDone"];
+let _fsm={step:0,phase:null,turn:null,last:null,done:false};
+function resetFSM(){_fsm={step:0,phase:null,turn:null,last:null,done:false};renderFSM();$("#fsm").classList.add("on");}
+function bumpFSM(i){if(i>_fsm.step)_fsm.step=i;}
+function updateFSM(e){
+  if(e.turn!=null)_fsm.turn=e.turn;
+  const ph=e.phase!=null?e.phase:(e.state&&e.state.phase);
+  if(ph!=null)_fsm.phase=ph;
+  if(e.type==="session_start"||e.type==="demo_status"){bumpFSM(0);}
+  else if(e.type==="tool_step"){
+    _fsm.last=e.tool;
+    if(e.tool==="ask_user")bumpFSM(1);
+    else if(e.tool==="submit_sql")bumpFSM(2);
+    else bumpFSM(0);
+    if(e.phase===2||e.phase==="2")bumpFSM(3);
+  }else if(e.type==="dialogue"){
+    _fsm.last=e.role==="user"?"user reply":"agent msg";
+    bumpFSM(1); if(e.phase===2||e.phase==="2")bumpFSM(3);
+  }else if(e.type==="phase_result"){
+    if(e.phase===2||e.phase==="2")bumpFSM(3);else bumpFSM(2);
+    _fsm.last="phase "+e.phase+(e.passed?" ✅":" ❌");
+  }else if(e.type==="final"){_fsm.phase=null;_fsm.done=true;bumpFSM(4);}
+  renderFSM();
+}
+function renderFSM(){
+  const f=$("#fsm");if(!f)return;
+  let steps="";
+  _FSM_STEPS.forEach((k,i)=>{
+    const cls=_fsm.done?(i<=4?"done":""):(i<_fsm.step?"done":i===_fsm.step?"active":"");
+    const mark=cls==="done"?"✓":(i+1);
+    steps+=`<div class="step ${cls}"><span class="dot">${mark}</span>${esc(t2(k))}</div>`;
+    if(i<_FSM_STEPS.length-1)steps+=`<span class="sep ${(_fsm.done||i<_fsm.step)?'done':''}"></span>`;
+  });
+  const meta=[];
+  if(_fsm.phase!=null)meta.push(`${esc(t2("fsmPhase"))} <b>${esc(""+_fsm.phase)}</b>`);
+  if(_fsm.turn!=null)meta.push(`${esc(t2("fsmTurn"))} <b>${esc(""+_fsm.turn)}</b>`);
+  if(_fsm.last)meta.push(`${esc(t2("fsmLast"))} <b>${esc(""+_fsm.last)}</b>`);
+  f.innerHTML=`<div class="steps">${steps}</div>`+(meta.length?`<div class="meta">${meta.map(m=>`<span>${m}</span>`).join("")}</div>`:"");
+}
+// ---- live stats (agent steps / tool calls / ≈tokens) + per-tool breakdown ----
+let _stats={steps:0,tools:0,tokens:0,byTool:{}}, _statsOpen=false;
+function estTokens(s){return s?Math.ceil((""+s).length/4):0;}
+function resetStats(){_stats={steps:0,tools:0,tokens:0,byTool:{}};renderStats();$("#stats").classList.add("on");}
+function updateStats(e){
+  if(e.type==="tool_step"){_stats.tools++;_stats.steps++;
+    _stats.byTool[e.tool]=(_stats.byTool[e.tool]||0)+1;
+    _stats.tokens+=estTokens(fmt(e.args||{}))+estTokens(fmt(e.result==null?"":e.result));}
+  else if(e.type==="dialogue"){_stats.steps++;_stats.tokens+=estTokens(e.content||"");}
+  else if(e.type==="session_start"){_stats.tokens+=estTokens(sel?(_ans&&_ans.q)||"":"");}
+  renderStats();
+}
+function toggleStats(){_statsOpen=!_statsOpen;renderStats();}
+function renderStats(){
+  const s=$("#stats");if(!s)return;
+  const tok=_stats.tokens>=1000?(_stats.tokens/1000).toFixed(1)+"k":_stats.tokens;
+  const cards=[["stSteps",_stats.steps,false],["stToolCalls",_stats.tools,true],["stTokens",tok,false]]
+    .map(([k,v,click])=>`<div class="stat${click?' clickable':''}"${click?' onclick="toggleStats()"':''}>`+
+      `<span class="v">${v}${click?` <span class="caret2">${_statsOpen?'▾':'▸'}</span>`:''}</span>`+
+      `<span class="k">${esc(t2(k))}</span></div>`).join("");
+  let bd="";
+  if(_statsOpen){
+    const items=Object.entries(_stats.byTool).sort((a,b)=>b[1]-a[1]);
+    bd=`<div id="toolbd">`+(items.length?items.map(([t,n])=>
+      `<span class="tbd"><code>${esc(t)}</code> <b>${n}</b></span>`).join(""):`<span class="tbd">—</span>`)+`</div>`;
+  }
+  s.innerHTML=`<div class="statrow">${cards}</div>${bd}`;
+}
+let _submitN=0;
+// per-event manual fold (click a submit header to collapse its body)
+function toggleEv(head){const ev=head.closest(".ev");if(ev)ev.classList.toggle("collapsed");}
+let _finished=false;
+function startStream(url){
+  if(es){es.close();es=null;}   // codex P0: never leave a prior EventSource open (double-render on re-Run/task-switch)
+  $("#stream").innerHTML="";resetFSM();resetStats();_submitN=0;
+  $("#runBtn")&&($("#runBtn").disabled=true);
+  $("#repBtn")&&($("#repBtn").disabled=true);$("#stopBtn").disabled=false;_finished=false;
+  es=new StaticReplay(url+(url.includes("?")?"&":"?")+"archive="+archiveSet);
+  es.onmessage=ev=>{let e;try{e=JSON.parse(ev.data);}catch(_){return;}
+    if(e.type==="demo_done")_finished=true;render(e);};
+  es.onerror=()=>{
+    // EventSource fires onerror on the normal end-of-stream AND would then try
+    // to auto-reconnect (which re-runs the whole task). Always close to stop the
+    // reconnect; only warn if we never reached demo_done.
+    if(es)es.close();es=null;
+    if(!_finished)add("status","⚠ stored trajectory could not be loaded — please retry Replay");
+    endRun();
+  };
+}
+function runTask(){if(sel)startStream(`/api/run?split=${split}&id=${encodeURIComponent(sel)}`);}
+function replayTask(){if(sel)startStream(`/api/replay?split=${split}&id=${encodeURIComponent(sel)}&delay=0.35`);}
+function stopRun(){if(es)es.close();add("status","stopped");endRun();}
+function endRun(){$("#runBtn")&&($("#runBtn").disabled=(!demoLive||split!==activeSplit));$("#repBtn")&&($("#repBtn").disabled=false);
+  $("#stopBtn").disabled=true;if(es){es.close();es=null;}}
+function render(e){
+  try{updateFSM(e);updateStats(e);}catch(_){}
+  const turn=e.turn!=null?`<span class="turn">turn ${e.turn}</span>`:"";
+  if(e.type==="demo_status"||e.type==="session_start"){
+    add("status",esc(e.message||("session start"+(e.replay?" · REPLAY":"")) ));
+  }else if(e.type==="tool_step"){
+    if(e.tool==="ask_user"){
+      // strip budget from the agent's own question too — it now sees budget
+      // wording in tool docs/notes and could echo it (codex review #3).
+      const q=stripBudget((e.args&&(e.args.question||e.args.query))||fmt(e.args||{}));
+      const reply=e.result!=null?stripBudget(fmt(e.result)):null;
+      add("user_sim",`<div class="h">🗣 ask_user → user simulator ${turn}</div><pre>${esc(q)}</pre>`+
+        (reply!=null?`<div class="evpart"><div class="plabel">🧑 reply</div><pre>${esc(reply)}</pre></div>`:""));
+      pushUS("agent",q); if(reply!=null) pushUS("user",reply); return;}
+    const sql=isSQL(e.tool);
+    // Labelled, consistently-spaced args + result blocks. SQL args go through the
+    // highlighter; other args are budget-stripped JSON. Empty args are omitted so
+    // argless tools don't render a bare "{}".
+    const hasArgs=e.args&&(sql?!!e.args.sql:Object.keys(e.args).length>0);
+    const argsInner=sql&&e.args&&e.args.sql?`<pre class="sql">${hlSQL(e.args.sql)}</pre>`:`<pre>${mathify(esc(stripBudget(fmt(e.args||{}))))}</pre>`;
+    const args=hasArgs?`<div class="evpart"><div class="plabel">${sql?'SQL':esc(t2('args'))}</div>${argsInner}</div>`:"";
+    const res=e.result!=null?`<div class="evpart"><div class="plabel">↩ ${esc(t2('result'))}</div>${renderResult(e.result)}</div>`:"";
+    if(e.tool==="submit_sql"){
+      const ok=/Phase\s*\d\s*correct/i.test(fmt(e.result==null?"":e.result));
+      const n=(++_submitN);
+      const head=`<div class="h subhead" onclick="toggleEv(this)">`+
+        `<span class="tname">⚙ submit_sql #${n}</span> `+
+        `<span class="subbadge ${ok?'ok':'fail'}">${ok?'✅ passed':'❌ '+esc(t2('failedSubmit'))}</span>`+
+        `${turn}<span class="evtoggle"></span></div>`;
+      add("tool_call sql submitev "+(ok?'subok':'subfail'),head+`<div class="evbody">${args}${res}</div>`);
+      return;
+    }
+    add("tool_call"+(sql?" sql":""),`<div class="h"><span class="tname">⚙ ${esc(e.tool)}</span>${turn}</div>${args}${res}`);
+  }else if(e.type==="dialogue"){
+    const isU=(e.role==="user");
+    const content=stripBudget(e.content||"");
+    add(isU?"user_sim":"assistant_text",`<div class="h">${isU?'🧑 user simulator':'🤖 agent'} · phase ${e.phase??'?'}</div><pre>${esc(content)}</pre>`);
+    pushUS(isU?"user":"agent",content);
+  }else if(e.type==="phase_result"){
+    add(e.passed?"phase_pass":"phase_fail",`<div class="h">${e.passed?'✅':'❌'} phase ${e.phase} ${e.passed?'PASSED':'failed'}</div>`);
+  }else if(e.type==="final"){
+    const s=e.state||{};const v=x=>x===true?'PASS':x===false?'FAIL':'—';const c=x=>x===true?'var(--grn)':x===false?'var(--red)':'var(--mut)';
+    add("final",`<div class="h">🏁 final${s.replay?' (replay)':''}</div><div class="verdict">
+      <span>P1 <b style="color:${c(s.phase1_passed)}">${v(s.phase1_passed)}</b></span>
+      <span>P2 <b style="color:${c(s.phase2_passed)}">${v(s.phase2_passed)}</b></span>
+      <span>reward <b>${s.total_reward??'?'}</b></span></div>`);
+  }else if(e.type==="error"){add("phase_fail",`<div class="h">⚠ error</div><pre>${esc(e.message)}</pre>`);
+  }else if(e.type==="demo_done"){endRun();}
+}
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>loadList(t.dataset.split));
+
+// Draggable column resizers: 'left' handle resizes #left, 'mid' resizes #mid.
+(function(){
+  let drag=null,startX=0,startW=0,target=null;
+  document.querySelectorAll(".resizer").forEach(rz=>{
+    rz.addEventListener("mousedown",ev=>{
+      drag=rz.dataset.rz;target=document.getElementById(drag==="left"?"left":"mid");
+      startX=ev.clientX;startW=target.getBoundingClientRect().width;rz.classList.add("drag");
+      ev.preventDefault();document.body.style.userSelect="none";
+    });
+  });
+  window.addEventListener("mousemove",ev=>{
+    if(!drag)return;
+    let w=startW+(ev.clientX-startX);
+    w=Math.max(160,Math.min(w,window.innerWidth-300));
+    target.style.width=w+"px";target.style.flex="0 0 "+w+"px";
+  });
+  window.addEventListener("mouseup",()=>{
+    if(!drag)return;drag=null;target=null;document.body.style.userSelect="";
+    document.querySelectorAll(".resizer").forEach(r=>r.classList.remove("drag"));
+  });
+})();
+
+// codex P2: Escape closes whichever modal is open (presenter keyboard flow).
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;
+  const hm=$("#helpmodal");if(hm&&hm.classList.contains("show")){closeHelp();return;}
+  const tm=$("#tblmodal");if(tm&&tm.classList.contains("show")){tm.classList.remove("show");return;}
+  const am=$("#ansmodal");if(am&&am.classList.contains("show"))closeAns();});
+HELP.en = `## Browser replay demo
+1. Select a trajectory set: PASCAL frozen, PASCAL submitted NVD, or ReAct NVD.
+2. Select lite_300 or full_600, expand a database group, and choose a task. Use All to include failures.
+3. Click Replay anchor to play recorded tool calls, SQL results and user clarifications. Choose 1×, 4× or Instant speed. Stop cancels playback.
+4. Inspect schema tables, archived samples and the knowledge base. Answer key opens reference SQL and cached Chinese explanations.
+5. Switch archive, task or split to explore another run. ReAct has 290 lite trajectories and no full trajectories.
+This website replays stored results; it does not call a model or execute SQL. Live setup links to the code repository.
+The 2,083 trajectories include different runs of the same 900 tasks. Historical submitted full and ReAct lite sets have 7 and 10 missing records respectively.`;
+HELP.zh = `## 浏览器回放演示
+1. 选择轨迹集：PASCAL frozen、PASCAL submitted NVD 或 ReAct NVD。
+2. 选择 lite_300 或 full_600，展开数据库分组并选择任务。切到 All 可查看失败案例。
+3. 点击回放，逐步查看存档中的工具调用、SQL 结果和用户澄清。可选 1×、4× 或 Instant 速度；Stop 停止播放。
+4. 查看 schema、表格存档样例和知识库；答案解析可查看参考 SQL 与缓存中文解析。
+5. 切换轨迹集、任务或数据划分即可查看另一条记录。ReAct 只有 290 条 lite 轨迹，没有 full 轨迹。
+网页不调用模型、不执行 SQL；Live setup 链接提供实时运行的安装方法。
+2,083 条轨迹是同一组 900 道任务的不同运行记录；历史 submitted full 和 ReAct lite 分别缺少 7 条和 10 条记录。`;
+applyLang();health().then(()=>loadList("lite")).catch(error=>{document.querySelector('#list').textContent=error.message;});
+</script>
+</body>
+</html>

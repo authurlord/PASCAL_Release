@@ -1,0 +1,1 @@
+[{"type":"demo_status","message":"replaying stored trajectory for museum_9…"},{"type":"session_start","replay":true},{"type":"phase_result","phase":1,"passed":false},{"type":"phase_result","phase":2,"passed":false},{"type":"final","state":{"phase1_passed":false,"phase2_passed":false,"total_reward":0.0,"replay":true}},{"type":"demo_done"}]
